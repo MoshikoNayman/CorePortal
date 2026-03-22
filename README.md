@@ -14,7 +14,6 @@ Simple deploy folder for the personal finance and portfolio web app.
 - `/` - Home
 - `/VPM` - Virtual Portfolio Manager
 - `/BAT` - bank ledger + owner overview + net worth view
-- `/NWD` - compatibility alias to `/BAT`
 - `/OTD` - out-the-door estimator (if file exists)
 
 ## Quick run
