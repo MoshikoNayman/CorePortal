@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Out-the-Door Estimator</title>
+  <style>
+    @import url('__COREPORTAL_ASSET_THEME_PATH__');
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --ink: #11203b;
+      --muted: #5f6b85;
+      --line: #d9e1ee;
+      --brand: #2952ff;
+      --brand-soft: #edf2ff;
+      --good: #0f7a34;
+      --total: #7a3e00;
+      --shadow: 0 10px 28px rgba(20, 42, 90, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-ui);
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #13203c, #2952ff);
+      color: white;
+      padding: 24px;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px 0;
+      font-size: 34px;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 920px;
+      color: rgba(255,255,255,0.86);
+      line-height: 1.5;
+    }
+
+    .hero-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .hero-badge {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .hero-badge a {
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(217, 225, 238, 0.75);
+      padding: 18px;
+    }
+
+    .card h2 {
+      margin: 0 0 8px 0;
+      font-size: 21px;
+    }
+
+    .card p {
+      margin: 0 0 14px 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      padding: 14px;
+      border-radius: 12px;
+      background: #f9fbff;
+      border: 1px solid var(--line);
+    }
+
+    label {
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 8px;
+      display: block;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+
+    .hint {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    input[type="number"],
+    select {
+      width: 100%;
+      font-size: 1rem;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    input[type="number"]:focus,
+    select:focus {
+      border-color: var(--brand);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(41,82,255,0.12);
+      transform: translateY(-1px);
+    }
+
+    .result {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      font-family: var(--font-mono);
+      white-space: pre-wrap;
+      font-size: 0.96rem;
+      min-height: 360px;
+      color: var(--ink);
+      line-height: 1.48;
+      user-select: text;
+    }
+
+    .result strong {
+      color: var(--total);
+      font-weight: 900;
+    }
+
+    .result .total-value {
+      white-space: nowrap;
+    }
+
+    .result .total-context {
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .result .total-line {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .result .positive {
+      color: var(--good);
+      font-weight: 900;
+    }
+
+    .footer {
+      margin-top: 18px;
+      padding: 14px 4px 6px 4px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .page { padding: 14px; }
+      .layout { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <h1>Out-the-Door Estimator</h1>
+      <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">by Moshiko Nayman</p>
+      <p>
+        A configurable vehicle pricing system for households, families, or teams. Each workspace can compare MSRP,
+        discounts, trade-ins, taxes, and fees with year-based tax and fee presets.
+      </p>
+      <div class="hero-meta">
+        <div class="hero-badge">FY: <span id="policyYearBadge">2025</span></div>
+        <div class="hero-badge">Year-based tax and fee settings are editable</div>
+        <div class="hero-badge"><a href="__COREPORTAL_ROOT_PATH__">Back to Home</a></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="card">
+        <h2>Inputs</h2>
+        <p>Adjust price, discount, trade-in, rebate, and fee assumptions. The estimate refreshes immediately.</p>
+        <form id="calcForm" onsubmit="return false;">
+          <div class="field">
+      <label for="msrp">MSRP / Quote ($)</label>
+      <input type="number" id="msrp" value="67000" min="0" step="1" />
+      <span class="hint">Starting vehicle price before incentives.</span>
+    </div>
+
+    <div class="field">
+      <label for="discount">Discount %</label>
+      <input type="number" id="discount" value="0" min="0" max="100" step="0.01" />
+      <span class="hint">Dealer markdown applied before taxes.</span>
+    </div>
+
+    <div class="field">
+      <label for="tradein">Trade-in Value ($)</label>
+      <input type="number" id="tradein" value="22000" min="0" step="1" />
+      <span class="hint">Vehicle credit reducing taxable price.</span>
+    </div>
+
+    <div class="field">
+      <label for="rebate">Manufacturer Rebate ($)</label>
+      <input type="number" id="rebate" value="1000" min="0" step="1" />
+      <span class="hint">Factory incentive after fees and tax math.</span>
+    </div>
+
+    <div class="field">
+      <label for="docfee">Destination/Doc Fee ($)</label>
+      <input type="number" id="docfee" value="1000" min="0" step="1" />
+      <span class="hint">Shipping, doc, or dealer prep charges.</span>
+    </div>
+
+    <div class="field">
+      <label for="otherfees">Other Dealer Fees ($)</label>
+      <input type="number" id="otherfees" value="0" min="0" step="1" />
+      <span class="hint">Any misc charges you want included.</span>
+    </div>
+
+    <div class="field">
+      <label for="policy_year">FY</label>
+      <select id="policy_year"></select>
+      <span class="hint">Fiscal year for tax/fee assumptions (auto-generated through 2099).</span>
+    </div>
+
+    <div class="field">
+      <label for="tax_rate">Sales Tax Rate (%)</label>
+      <input type="number" id="tax_rate" value="6.625" min="0" step="0.001" />
+      <span class="hint">Applied to taxable amount.</span>
+    </div>
+
+    <div class="field">
+      <label for="lfis_rate">LFIS Rate (%)</label>
+      <input type="number" id="lfis_rate" value="0.4" min="0" step="0.001" />
+      <span class="hint">Luxury surcharge rate.</span>
+    </div>
+
+    <div class="field">
+      <label for="lfis_threshold">LFIS Threshold ($)</label>
+      <input type="number" id="lfis_threshold" value="45000" min="0" step="1" />
+      <span class="hint">LFIS applies only above this amount.</span>
+    </div>
+
+    <div class="field">
+      <label for="dmv_plus_title">DMV + Title Fees ($)</label>
+      <input type="number" id="dmv_plus_title" value="144" min="0" step="1" />
+      <span class="hint">Bundled fixed government fees.</span>
+    </div>
+
+    <div class="field">
+      <label for="plate_fee">Plate Fee ($)</label>
+      <input type="number" id="plate_fee" value="5" min="0" step="1" />
+      <span class="hint">Registration plate fee.</span>
+    </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Estimate</h2>
+        <p>Live output for total cost before and after discount.</p>
+        <div class="result" id="output"></div>
+      </section>
+    </div>
+
+    <footer class="footer">© 2026 Moshiko Nayman · Proprietary License · All rights reserved.</footer>
+  </div>
+
+  <script>
+    const DEFAULT_YEAR_POLICY_PRESETS = {
+      "2024": {
+        taxRate: 6.625,
+        lfisRate: 0.4,
+        lfisThreshold: 45000,
+        dmvPlusTitle: 144,
+        plate: 5,
+      },
+      "2025": {
+        taxRate: 6.625,
+        lfisRate: 0.4,
+        lfisThreshold: 45000,
+        dmvPlusTitle: 144,
+        plate: 5,
+      },
+      "2026": {
+        taxRate: 6.625,
+        lfisRate: 0.4,
+        lfisThreshold: 45000,
+        dmvPlusTitle: 144,
+        plate: 5,
+      },
+    };
+
+    let yearPolicyPresets = { ...DEFAULT_YEAR_POLICY_PRESETS };
+
+    function format(num) {
+      return "$" + Math.round(num).toLocaleString();
+    }
+
+    function setValue(id, value) {
+      document.getElementById(id).value = value;
+    }
+
+    function getSortedYears() {
+      return Object.keys(yearPolicyPresets).sort((a, b) => Number(b) - Number(a));
+    }
+
+    function ensureFutureYearCoverage() {
+      const numericYears = Object.keys(yearPolicyPresets)
+        .map((year) => Number(year))
+        .filter((year) => Number.isFinite(year));
+
+      if (!numericYears.length) {
+        yearPolicyPresets = {
+          [String(currentYear)]: {
+            taxRate: 6.625,
+            lfisRate: 0.4,
+            lfisThreshold: 45000,
+            dmvPlusTitle: 144,
+            plate: 5,
+          }
+        };
+      }
+
+      const refreshedYears = Object.keys(yearPolicyPresets)
+        .map((year) => Number(year))
+        .filter((year) => Number.isFinite(year));
+      const latestYear = Math.max(...refreshedYears);
+      const latestPreset = yearPolicyPresets[String(latestYear)] || DEFAULT_YEAR_POLICY_PRESETS['2025'];
+      const targetMaxYear = 2099;
+
+      for (let year = latestYear + 1; year <= targetMaxYear; year += 1) {
+        yearPolicyPresets[String(year)] = { ...latestPreset };
+      }
+    }
+
+    function populateYearOptions(preferredYear) {
+      const select = document.getElementById('policy_year');
+      const years = getSortedYears();
+      select.innerHTML = '';
+      years.forEach((year) => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        select.appendChild(option);
+      });
+
+      const targetYear = preferredYear && years.includes(preferredYear)
+        ? preferredYear
+        : (years.includes('2025') ? '2025' : years[years.length - 1]);
+
+      if (targetYear) {
+        select.value = targetYear;
+      }
+    }
+
+    async function loadYearPolicyPresets() {
+      try {
+        const response = await fetch('__COREPORTAL_OTD_POLICY_PATH__', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('policy file unavailable');
+        }
+
+        const payload = await response.json();
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+          throw new Error('policy file format is invalid');
+        }
+
+        yearPolicyPresets = payload;
+        ensureFutureYearCoverage();
+      } catch (error) {
+        yearPolicyPresets = { ...DEFAULT_YEAR_POLICY_PRESETS };
+        ensureFutureYearCoverage();
+      }
+    }
+
+    function applyYearPolicy(year) {
+      const preset = yearPolicyPresets[year];
+      if (!preset) {
+        return;
+      }
+      document.getElementById('policyYearBadge').textContent = year;
+      setValue('tax_rate', preset.taxRate);
+      setValue('lfis_rate', preset.lfisRate);
+      setValue('lfis_threshold', preset.lfisThreshold);
+      setValue('dmv_plus_title', preset.dmvPlusTitle);
+      setValue('plate_fee', preset.plate);
+    }
+
+    function calculate() {
+      try {
+        const msrp = parseFloat(document.getElementById('msrp').value) || 0;
+        const discountPercent = parseFloat(document.getElementById('discount').value) || 0;
+        const tradein = parseFloat(document.getElementById('tradein').value) || 0;
+        const rebate = parseFloat(document.getElementById('rebate').value) || 0;
+        const docfee = parseFloat(document.getElementById('docfee').value) || 0;
+        const otherfees = parseFloat(document.getElementById('otherfees').value) || 0;
+        const policyYear = document.getElementById('policy_year').value;
+        const taxRatePct = parseFloat(document.getElementById('tax_rate').value) || 0;
+        const lfisRatePct = parseFloat(document.getElementById('lfis_rate').value) || 0;
+        const lfisThreshold = parseFloat(document.getElementById('lfis_threshold').value) || 0;
+        const dmvPlusTitle = parseFloat(document.getElementById('dmv_plus_title').value) || 0;
+        const plate = parseFloat(document.getElementById('plate_fee').value) || 0;
+        const taxRate = taxRatePct / 100;
+        const lfisRate = lfisRatePct / 100;
+
+        const discountAmount = msrp * (discountPercent / 100);
+        const msrpAfterDiscount = msrp - discountAmount;
+
+        const taxable = Math.max(msrpAfterDiscount - tradein, 0);
+        const tax = taxable * taxRate;
+        const lfis = msrpAfterDiscount > lfisThreshold ? msrpAfterDiscount * lfisRate : 0;
+        const taxSavings = tradein * taxRate;
+
+        const totalWithoutDiscount = Math.max(msrp - tradein, 0) + tax + docfee + otherfees + dmvPlusTitle + plate + (msrp > lfisThreshold ? msrp * lfisRate : 0) - rebate;
+        const totalAfterDiscount = taxable + tax + docfee + otherfees + dmvPlusTitle + plate + lfis - rebate;
+
+        let output = "";
+        output += "==== COST BREAKDOWN ====\n\n";
+        output += "🗓️ FY                 : " + policyYear + "\n";
+        output += "💲 MSRP                : " + format(msrp) + "\n";
+        output += "🎯 Discount Selected   : " + discountPercent.toFixed(2) + "% (-" + format(discountAmount) + ")\n";
+        output += "📉 Trade-in            : " + format(tradein) + "\n";
+        output += "📈 Price after trade-in: " + format(taxable) + "\n";
+        output += "📈 Sales tax (" + taxRatePct.toFixed(3) + "%)  : " + format(tax) + "\n";
+        output += "📈 Destination/Doc fee : " + format(docfee) + "\n";
+        output += "📈 DMV + title fees    : " + format(dmvPlusTitle) + "\n";
+        output += "📈 Other dealer fees   : " + format(otherfees) + "\n";
+        output += "📈 Plate fee           : " + format(plate) + "\n";
+        output += "📈 LFIS surcharge (" + lfisRatePct.toFixed(3) + "% above " + format(lfisThreshold) + ") : " + format(lfis) + "\n";
+        output += "📉 Manufacturer rebate : -" + format(rebate) + "\n";
+        output += "📉 Trade-In Tax        : -" + format(taxSavings) + "\n\n";
+        output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(without discount)</span>:&nbsp;<strong class='total-value'>" + format(totalWithoutDiscount) + "</strong></span><br>";
+        output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(after " + discountPercent.toFixed(2) + "%&nbsp;discount)</span>:&nbsp;<span class='positive total-value'>" + format(totalAfterDiscount) + "</span></span><br>";
+
+        document.getElementById('output').innerHTML = output;
+      } catch (e) {
+        document.getElementById('output').innerHTML = 'Error: ' + e.message;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const watchedFields = [
+        'msrp', 'discount', 'tradein', 'rebate', 'docfee', 'otherfees',
+        'tax_rate', 'lfis_rate', 'lfis_threshold', 'dmv_plus_title', 'plate_fee'
+      ];
+
+      await loadYearPolicyPresets();
+      populateYearOptions(String(new Date().getFullYear()));
+
+      watchedFields.forEach(id => {
+        document.getElementById(id).addEventListener('input', calculate);
+      });
+
+      document.getElementById('policy_year').addEventListener('change', (event) => {
+        applyYearPolicy(event.target.value);
+        calculate();
+      });
+
+      applyYearPolicy(document.getElementById('policy_year').value);
+      calculate();
+    });
+  </script>
+</body>
+</html>

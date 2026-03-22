@@ -1,0 +1,16 @@
+[Unit]
+Description=CorePortal
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/coreportal
+Environment=PORT=8081
+EnvironmentFile=-/etc/default/coreportal
+ExecStart=/usr/bin/python3 /home/pi/coreportal/coreportal.py --host 0.0.0.0 --port ${PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
