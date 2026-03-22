@@ -72,7 +72,6 @@ OPEN_APP_PATH = with_base_path("/apps/open/{app_id}")
 VPM_PATH = with_base_path("/VPM")
 OTD_PATH = with_base_path("/OTD")
 TRACKER_PATH = with_base_path("/BAT")
-NETWORTH_PATH = with_base_path("/NWD")
 DEFAULT_PORTFOLIO_NAME = "Main Portfolio"
 DEFAULT_TENANTS = ("Moshiko",)
 MONEY_QUANT = Decimal("0.01")
@@ -3130,12 +3129,6 @@ async def legacy_tracker_redirect(request):
     return RedirectResponse(url=target, status_code=308)
 
 
-async def legacy_networth_redirect(request):
-    query_string = request.url.query
-    target = f"{TRACKER_PATH}?{query_string}" if query_string else TRACKER_PATH
-    return RedirectResponse(url=target, status_code=308)
-
-
 async def otd_tool(request):
     otd_app_config = get_app_by_id("otd") or {}
     otd_path = otd_app_config.get("file_path")
@@ -3144,19 +3137,21 @@ async def otd_tool(request):
 
     if not otd_path.exists():
         return HTMLResponse(
-            """
-            <!doctype html>
-            <html lang=\"en\"><head><meta charset=\"utf-8\"><title>OTD Tool</title></head>
-            <body style=\"font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;padding:24px;\">
-              <h1>OTD Tool not found</h1>
-                            <p>Expected file: <strong>OTD/otd_estimator.html</strong></p>
-                            <p><a href=\"/\">Back to Home</a></p>
-            </body></html>
-            """,
+            f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>OTD Tool</title></head>"
+            f"<body style='font-family:Inter,sans-serif;padding:24px;'>"
+            f"<h1>OTD Tool not found</h1>"
+            f"<p>Expected file: <strong>OTD/otd_estimator.html</strong></p>"
+            f"<p><a href='{ROOT_PATH}'>Back to Home</a></p>"
+            f"</body></html>",
             status_code=404,
         )
 
     content = otd_path.read_text(encoding="utf-8")
+    content = (
+        content.replace("__COREPORTAL_ASSET_THEME_PATH__", ASSET_THEME_PATH)
+        .replace("__COREPORTAL_ROOT_PATH__", ROOT_PATH)
+        .replace("__COREPORTAL_OTD_POLICY_PATH__", f"{OTD_PATH}/policy_years.json")
+    )
     return HTMLResponse(content)
 
 
@@ -3924,12 +3919,6 @@ async def tracker_zeroize(request):
     return redirect_tracker(message, tenant_id=tenant_id, account_id=account_id)
 
 
-async def networth_dashboard(request):
-    query_string = request.url.query
-    target = f"{TRACKER_PATH}?{query_string}" if query_string else TRACKER_PATH
-    return RedirectResponse(url=target, status_code=308)
-
-
 async def dashboard(request):
     message = request.query_params.get("msg", "")
     tenant_id = parse_optional_int(request.query_params.get("tenant_id"))
@@ -4195,16 +4184,13 @@ app = Starlette(
         Route(f"{TRACKER_PATH}/entry/add", tracker_entry_add, methods=["POST"]),
         Route(f"{TRACKER_PATH}/transfer-to-vpm", tracker_transfer_to_vpm, methods=["POST"]),
         Route(f"{TRACKER_PATH}/zeroize", tracker_zeroize, methods=["POST"]),
-        Route(NETWORTH_PATH, networth_dashboard, methods=["GET"]),
         Route(OTD_PATH, otd_tool, methods=["GET"]),
         Route(f"{OTD_PATH}/policy_years.json", otd_policy_years, methods=["GET"]),
         Route(with_base_path("/otd/policy_years.json"), otd_policy_years, methods=["GET"]),
         Route(with_base_path("/portfolio"), legacy_vpm_redirect, methods=["GET"]),
         Route(with_base_path("/otd"), legacy_otd_redirect, methods=["GET"]),
         Route(with_base_path("/TRACKER"), legacy_tracker_redirect, methods=["GET"]),
-        Route(with_base_path("/NETWORTH"), legacy_networth_redirect, methods=["GET"]),
         Route(with_base_path("/tracker"), legacy_tracker_redirect, methods=["GET"]),
-        Route(with_base_path("/networth"), legacy_networth_redirect, methods=["GET"]),
         Route(with_base_path("/analyze"), analyze_stock, methods=["GET"]),
         Route(with_base_path("/snapshot/save"), snapshot_save, methods=["POST"]),
         Route(with_base_path("/snapshot/load"), snapshot_load, methods=["POST"]),
