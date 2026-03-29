@@ -18,11 +18,6 @@ Simple deploy folder for the personal finance and portfolio web app.
 - `/OTD` - Out-the-Door Estimator (original tool)
 - `/CVP` - Car Value Planner (new buy/sell + TCO planner)
 
-## CVP acronym
-
-- `CVP` = `Car Value Planner`
-- CVP is separate from OTD and focuses on buy/sell planning with TCO estimates
-
 ## Quick run
 
 ```bash
