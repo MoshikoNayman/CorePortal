@@ -539,9 +539,9 @@
               <th>Name</th>
               <th>Type</th>
               <th>Price</th>
-              <th>Fees</th>
+              <!-- <th>Fees</th>
               <th>APR %</th>
-              <th>Term</th>
+              <th>Term</th> -->
               <th>MPG</th>
               <th>Ins/mo</th>
               <th>Maint/mo</th>
@@ -743,9 +743,10 @@
           `<td><input type="text" id="c_${i}_name" value="${c.name}"></td>`,
           `<td><select id="c_${i}_type"><option value="new" ${c.type === 'new' ? 'selected' : ''}>New</option><option value="used" ${c.type === 'used' ? 'selected' : ''}>Used</option></select></td>`,
           `<td><input type="number" id="c_${i}_price" value="${c.price}" min="0" step="100"></td>`,
-          `<td><input type="number" id="c_${i}_fees" value="${c.fees}" min="0" step="50"></td>`,
-          `<td><input type="number" id="c_${i}_apr" value="${c.apr}" min="0" step="0.01"></td>`,
-          `<td><input type="number" id="c_${i}_term" value="${c.term}" min="1" step="1"></td>`,
+          // Fees, APR, Term hidden for simplicity and safety
+          `<td style='display:none'><input type="number" id="c_${i}_fees" value="${c.fees}" min="0" step="50"></td>`,
+          `<td style='display:none'><input type="number" id="c_${i}_apr" value="${c.apr}" min="0" step="0.01"></td>`,
+          `<td style='display:none'><input type="number" id="c_${i}_term" value="${c.term}" min="1" step="1"></td>`,
           `<td><input type="number" id="c_${i}_mpg" value="${c.mpg}" min="1" step="1"></td>`,
           `<td><input type="number" id="c_${i}_insurance" value="${c.insurance}" min="0" step="5"></td>`,
           `<td><input type="number" id="c_${i}_maintenance" value="${c.maintenance}" min="0" step="5"></td>`,
@@ -864,9 +865,10 @@
 
     function candidateTcoAtYears(car, years, ctx) {
       const months = years * 12;
+      // Ignore fees, APR, and term: treat as cash purchase
       const tradeInCredit = ctx.baseValueNow;
-      const principal = Math.max((car.price + car.fees + car.upfront) - tradeInCredit, 0);
-      const loan = monthlyLoan(principal, car.apr, car.term);
+      const principal = Math.max((car.price + car.upfront) - tradeInCredit, 0);
+      const loan = 0; // No loan
       const fuel = fuelMonthly(ctx.annualMiles, car.mpg, ctx.fuelPrice);
 
       const typeMaintFactor = car.type === 'new' ? 1 : 1.18;
@@ -874,7 +876,7 @@
 
       const resalePctAtYear = Math.max(car.resalePct7 * (1 - ((7 - years) * 0.045)), 10);
       const resale = car.price * (resalePctAtYear / 100);
-      const tco = (runningMonthly * months) + car.fees + car.upfront - resale;
+      const tco = (runningMonthly * months) + car.upfront - resale;
 
       return {
         tco: tco,
