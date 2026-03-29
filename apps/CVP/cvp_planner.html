@@ -332,6 +332,36 @@
       <input type="number" id="gross_income" value="12000" min="0" step="100" />
       <span class="hint">Used for affordability guidance.</span>
     </div>
+
+    <div class="field">
+      <label for="years_owned">Years You Plan to Keep</label>
+      <input type="number" id="years_owned" value="5" min="1" step="1" />
+      <span class="hint">Ownership horizon for TCO.</span>
+    </div>
+
+    <div class="field">
+      <label for="annual_miles">Annual Miles</label>
+      <input type="number" id="annual_miles" value="12000" min="0" step="100" />
+      <span class="hint">Used for fuel cost estimate.</span>
+    </div>
+
+    <div class="field">
+      <label for="fuel_cost_per_gallon">Fuel Cost ($/gal)</label>
+      <input type="number" id="fuel_cost_per_gallon" value="3.5" min="0" step="0.01" />
+      <span class="hint">Average expected fuel price.</span>
+    </div>
+
+    <div class="field">
+      <label for="expected_resale">Expected Resale Value ($)</label>
+      <input type="number" id="expected_resale" value="35000" min="0" step="100" />
+      <span class="hint">Expected sale value at end of ownership horizon.</span>
+    </div>
+
+    <div class="field">
+      <label for="current_car_sell">Current Car Sell Value ($)</label>
+      <input type="number" id="current_car_sell" value="22000" min="0" step="100" />
+      <span class="hint">Current car value if you sell now.</span>
+    </div>
         </form>
       </section>
 
@@ -494,6 +524,11 @@
         const aprRate = parseFloat(document.getElementById('apr_rate').value) || 0;
         const loanMonths = parseFloat(document.getElementById('loan_months').value) || 0;
         const grossIncome = parseFloat(document.getElementById('gross_income').value) || 0;
+        const yearsOwned = parseFloat(document.getElementById('years_owned').value) || 0;
+        const annualMiles = parseFloat(document.getElementById('annual_miles').value) || 0;
+        const fuelCostPerGallon = parseFloat(document.getElementById('fuel_cost_per_gallon').value) || 0;
+        const expectedResale = parseFloat(document.getElementById('expected_resale').value) || 0;
+        const currentCarSell = parseFloat(document.getElementById('current_car_sell').value) || 0;
         const taxRate = taxRatePct / 100;
         const lfisRate = lfisRatePct / 100;
 
@@ -520,13 +555,20 @@
         const selectedTier = tierSettings[vehicleTier] || tierSettings.practical;
         const financedPrincipal = Math.max(totalAfterDiscount - downPayment, 0);
         const monthlyLoan = monthlyLoanPayment(financedPrincipal, aprRate, loanMonths);
-        const monthlyTotalOwnership = monthlyLoan + selectedTier.insurance + selectedTier.reserve;
+        const monthlyFuel = ((annualMiles / 12) / 26) * fuelCostPerGallon;
+        const monthlyTotalOwnership = monthlyLoan + selectedTier.insurance + selectedTier.reserve + monthlyFuel;
         const affordabilityPercent = grossIncome > 0 ? (monthlyTotalOwnership / grossIncome) * 100 : 0;
         const affordabilityNote = affordabilityPercent > 20
           ? "Over 20% of income (high pressure)"
           : affordabilityPercent > 15
             ? "Between 15%-20% (caution zone)"
             : "Below 15% (healthier range)";
+
+          const buyNowNet = Math.max(totalAfterDiscount - currentCarSell, 0);
+          const holdingMonths = Math.max(yearsOwned * 12, 1);
+          const ownershipCashflow = monthlyTotalOwnership * holdingMonths;
+          const totalCostOfOwnership = buyNowNet + ownershipCashflow - expectedResale;
+          const monthlyTco = totalCostOfOwnership / holdingMonths;
 
         let output = "";
         output += "==== CVP COST BREAKDOWN ====\n\n";
@@ -552,9 +594,16 @@
         output += "🏦 Loan payment est.   : " + format(monthlyLoan) + " / month\n";
         output += "🛡️ Insurance est.      : " + format(selectedTier.insurance) + " / month\n";
         output += "🧰 Tier reserve est.   : " + format(selectedTier.reserve) + " / month\n";
+        output += "⛽ Fuel est.           : " + format(monthlyFuel) + " / month\n";
         output += "📊 Ownership est.      : " + format(monthlyTotalOwnership) + " / month\n";
         output += "💼 Income provided     : " + format(grossIncome) + " / month\n";
         output += "💼 Affordability       : " + affordabilityPercent.toFixed(2) + "% · " + affordabilityNote + "\n\n";
+        output += "==== BUY/SELL TCO VIEW ====\n\n";
+        output += "🧾 Buy-now net (after current sale): " + format(buyNowNet) + "\n";
+        output += "🕒 Ownership horizon             : " + yearsOwned.toFixed(0) + " years\n";
+        output += "🔁 Expected resale at exit       : " + format(expectedResale) + "\n";
+        output += "📦 Total Cost of Ownership (TCO) : " + format(totalCostOfOwnership) + "\n";
+        output += "📦 Monthly TCO equivalent        : " + format(monthlyTco) + " / month\n\n";
         output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(without discount)</span>:&nbsp;<strong class='total-value'>" + format(totalWithoutDiscount) + "</strong></span><br>";
         output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(after " + discountPercent.toFixed(2) + "%&nbsp;discount)</span>:&nbsp;<span class='positive total-value'>" + format(totalAfterDiscount) + "</span></span><br>";
 
@@ -568,7 +617,8 @@
       const watchedFields = [
         'msrp', 'discount', 'tradein', 'rebate', 'docfee', 'otherfees',
         'tax_rate', 'lfis_rate', 'lfis_threshold', 'dmv_plus_title', 'plate_fee',
-        'vehicle_tier', 'down_payment', 'apr_rate', 'loan_months', 'gross_income'
+        'vehicle_tier', 'down_payment', 'apr_rate', 'loan_months', 'gross_income',
+        'years_owned', 'annual_miles', 'fuel_cost_per_gallon', 'expected_resale', 'current_car_sell'
       ];
 
       await loadYearPolicyPresets();

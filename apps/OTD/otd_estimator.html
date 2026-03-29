@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CVP · Car Value Planner</title>
+  <title>Out-the-Door Estimator</title>
   <style>
     @import url('__COREPORTAL_ASSET_THEME_PATH__');
     :root {
@@ -206,11 +206,11 @@
 <body>
   <div class="page">
     <section class="hero">
-      <h1>CVP · Car Value Planner</h1>
+      <h1>Out-the-Door Estimator</h1>
       <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">by Moshiko Nayman</p>
       <p>
-        A configurable buy/replace planner for households and teams. Compare out-the-door cost, monthly ownership,
-        and affordability with tier-aware luxury/sport assumptions.
+        A configurable vehicle pricing system for households, families, or teams. Each workspace can compare MSRP,
+        discounts, trade-ins, taxes, and fees with year-based tax and fee presets.
       </p>
       <div class="hero-meta">
         <div class="hero-badge">FY: <span id="policyYearBadge">2025</span></div>
@@ -222,7 +222,7 @@
     <div class="layout">
       <section class="card">
         <h2>Inputs</h2>
-        <p>Adjust price, discount, trade-in, fee assumptions, plus financing and lifestyle tier. The estimate refreshes immediately.</p>
+        <p>Adjust price, discount, trade-in, rebate, and fee assumptions. The estimate refreshes immediately.</p>
         <form id="calcForm" onsubmit="return false;">
           <div class="field">
       <label for="msrp">MSRP / Quote ($)</label>
@@ -295,49 +295,12 @@
       <input type="number" id="plate_fee" value="5" min="0" step="1" />
       <span class="hint">Registration plate fee.</span>
     </div>
-
-    <div class="field">
-      <label for="vehicle_tier">Vehicle Tier</label>
-      <select id="vehicle_tier">
-        <option value="economy">Economy</option>
-        <option value="practical" selected>Practical</option>
-        <option value="comfort">Comfort</option>
-        <option value="sport">Sport</option>
-        <option value="luxury">Luxury</option>
-        <option value="exotic">Exotic</option>
-      </select>
-      <span class="hint">Luxury/sport level influences planning reserve and insurance estimate.</span>
-    </div>
-
-    <div class="field">
-      <label for="down_payment">Down Payment ($)</label>
-      <input type="number" id="down_payment" value="10000" min="0" step="100" />
-      <span class="hint">Cash applied to reduce financing.</span>
-    </div>
-
-    <div class="field">
-      <label for="apr_rate">APR (%)</label>
-      <input type="number" id="apr_rate" value="6.50" min="0" step="0.01" />
-      <span class="hint">Loan annual percentage rate.</span>
-    </div>
-
-    <div class="field">
-      <label for="loan_months">Loan Term (Months)</label>
-      <input type="number" id="loan_months" value="60" min="1" step="1" />
-      <span class="hint">Typical values: 48, 60, 72.</span>
-    </div>
-
-    <div class="field">
-      <label for="gross_income">Gross Monthly Income ($)</label>
-      <input type="number" id="gross_income" value="12000" min="0" step="100" />
-      <span class="hint">Used for affordability guidance.</span>
-    </div>
         </form>
       </section>
 
       <section class="card">
         <h2>Estimate</h2>
-        <p>Live output for purchase + financing + affordability.</p>
+        <p>Live output for total cost before and after discount.</p>
         <div class="result" id="output"></div>
       </section>
     </div>
@@ -378,15 +341,6 @@
 
     function setValue(id, value) {
       document.getElementById(id).value = value;
-    }
-
-    function monthlyLoanPayment(principal, annualPercent, months) {
-      if (months <= 0) return 0;
-      const monthlyRate = (annualPercent / 100) / 12;
-      if (monthlyRate === 0) {
-        return principal / months;
-      }
-      return principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
     }
 
     function getSortedYears() {
@@ -489,11 +443,6 @@
         const lfisThreshold = parseFloat(document.getElementById('lfis_threshold').value) || 0;
         const dmvPlusTitle = parseFloat(document.getElementById('dmv_plus_title').value) || 0;
         const plate = parseFloat(document.getElementById('plate_fee').value) || 0;
-        const vehicleTier = document.getElementById('vehicle_tier').value;
-        const downPayment = parseFloat(document.getElementById('down_payment').value) || 0;
-        const aprRate = parseFloat(document.getElementById('apr_rate').value) || 0;
-        const loanMonths = parseFloat(document.getElementById('loan_months').value) || 0;
-        const grossIncome = parseFloat(document.getElementById('gross_income').value) || 0;
         const taxRate = taxRatePct / 100;
         const lfisRate = lfisRatePct / 100;
 
@@ -508,30 +457,9 @@
         const totalWithoutDiscount = Math.max(msrp - tradein, 0) + tax + docfee + otherfees + dmvPlusTitle + plate + (msrp > lfisThreshold ? msrp * lfisRate : 0) - rebate;
         const totalAfterDiscount = taxable + tax + docfee + otherfees + dmvPlusTitle + plate + lfis - rebate;
 
-        const tierSettings = {
-          economy: { reserve: 75, insurance: 130 },
-          practical: { reserve: 125, insurance: 170 },
-          comfort: { reserve: 175, insurance: 220 },
-          sport: { reserve: 320, insurance: 350 },
-          luxury: { reserve: 420, insurance: 430 },
-          exotic: { reserve: 800, insurance: 950 },
-        };
-
-        const selectedTier = tierSettings[vehicleTier] || tierSettings.practical;
-        const financedPrincipal = Math.max(totalAfterDiscount - downPayment, 0);
-        const monthlyLoan = monthlyLoanPayment(financedPrincipal, aprRate, loanMonths);
-        const monthlyTotalOwnership = monthlyLoan + selectedTier.insurance + selectedTier.reserve;
-        const affordabilityPercent = grossIncome > 0 ? (monthlyTotalOwnership / grossIncome) * 100 : 0;
-        const affordabilityNote = affordabilityPercent > 20
-          ? "Over 20% of income (high pressure)"
-          : affordabilityPercent > 15
-            ? "Between 15%-20% (caution zone)"
-            : "Below 15% (healthier range)";
-
         let output = "";
-        output += "==== CVP COST BREAKDOWN ====\n\n";
+        output += "==== COST BREAKDOWN ====\n\n";
         output += "🗓️ FY                 : " + policyYear + "\n";
-        output += "🚗 Vehicle Tier       : " + vehicleTier.toUpperCase() + "\n";
         output += "💲 MSRP                : " + format(msrp) + "\n";
         output += "🎯 Discount Selected   : " + discountPercent.toFixed(2) + "% (-" + format(discountAmount) + ")\n";
         output += "📉 Trade-in            : " + format(tradein) + "\n";
@@ -544,17 +472,6 @@
         output += "📈 LFIS surcharge (" + lfisRatePct.toFixed(3) + "% above " + format(lfisThreshold) + ") : " + format(lfis) + "\n";
         output += "📉 Manufacturer rebate : -" + format(rebate) + "\n";
         output += "📉 Trade-In Tax        : -" + format(taxSavings) + "\n\n";
-        output += "==== FINANCING + OWNERSHIP ====\n\n";
-        output += "🏦 Down payment        : " + format(downPayment) + "\n";
-        output += "🏦 Financed principal  : " + format(financedPrincipal) + "\n";
-        output += "🏦 Loan APR            : " + aprRate.toFixed(2) + "%\n";
-        output += "🏦 Loan term           : " + loanMonths.toFixed(0) + " months\n";
-        output += "🏦 Loan payment est.   : " + format(monthlyLoan) + " / month\n";
-        output += "🛡️ Insurance est.      : " + format(selectedTier.insurance) + " / month\n";
-        output += "🧰 Tier reserve est.   : " + format(selectedTier.reserve) + " / month\n";
-        output += "📊 Ownership est.      : " + format(monthlyTotalOwnership) + " / month\n";
-        output += "💼 Income provided     : " + format(grossIncome) + " / month\n";
-        output += "💼 Affordability       : " + affordabilityPercent.toFixed(2) + "% · " + affordabilityNote + "\n\n";
         output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(without discount)</span>:&nbsp;<strong class='total-value'>" + format(totalWithoutDiscount) + "</strong></span><br>";
         output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(after " + discountPercent.toFixed(2) + "%&nbsp;discount)</span>:&nbsp;<span class='positive total-value'>" + format(totalAfterDiscount) + "</span></span><br>";
 
@@ -567,8 +484,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       const watchedFields = [
         'msrp', 'discount', 'tradein', 'rebate', 'docfee', 'otherfees',
-        'tax_rate', 'lfis_rate', 'lfis_threshold', 'dmv_plus_title', 'plate_fee',
-        'vehicle_tier', 'down_payment', 'apr_rate', 'loan_months', 'gross_income'
+        'tax_rate', 'lfis_rate', 'lfis_threshold', 'dmv_plus_title', 'plate_fee'
       ];
 
       await loadYearPolicyPresets();

@@ -28,19 +28,24 @@ VPM_DIR_CANDIDATES = [
     APP_ROOT / "VPM",
     APP_ROOT / "apps" / "VPM",
 ]
-CVP_HTML_CANDIDATES = [
-    APP_ROOT / "apps" / "CVP" / "cvp_planner.html",
-    APP_ROOT / "CVP" / "cvp_planner.html",
+OTD_HTML_CANDIDATES = [
     APP_ROOT / "apps" / "OTD" / "otd_estimator.html",
     APP_ROOT / "OTD" / "otd_estimator.html",
     APP_ROOT / "tools" / "OTD" / "otd_estimator.html",
+]
+OTD_POLICY_CANDIDATES = [
+    APP_ROOT / "apps" / "OTD" / "policy_years.json",
+    APP_ROOT / "OTD" / "policy_years.json",
+    APP_ROOT / "tools" / "OTD" / "policy_years.json",
+]
+CVP_HTML_CANDIDATES = [
+    APP_ROOT / "apps" / "CVP" / "cvp_planner.html",
+    APP_ROOT / "CVP" / "cvp_planner.html",
 ]
 CVP_POLICY_CANDIDATES = [
     APP_ROOT / "apps" / "CVP" / "policy_years.json",
     APP_ROOT / "CVP" / "policy_years.json",
     APP_ROOT / "apps" / "OTD" / "policy_years.json",
-    APP_ROOT / "OTD" / "policy_years.json",
-    APP_ROOT / "tools" / "OTD" / "policy_years.json",
 ]
 THEME_CSS_CANDIDATES = [
     APP_ROOT / "apps" / "shared" / "coreportal_theme.css",
@@ -116,6 +121,20 @@ BACKUP_DIR = VPM_DIR / "portfolio_backups"
 LEGACY_DB_PATHS = [APP_ROOT / "virtual_portfolio.db"]
 LEGACY_BACKUP_DIRS = [APP_ROOT / "portfolio_backups"]
 
+def resolve_otd_html_path() -> Path:
+    for candidate in OTD_HTML_CANDIDATES:
+        if candidate.exists():
+            return candidate
+    return OTD_HTML_CANDIDATES[0]
+
+
+def resolve_otd_policy_path() -> Path:
+    for candidate in OTD_POLICY_CANDIDATES:
+        if candidate.exists():
+            return candidate
+    return OTD_POLICY_CANDIDATES[0]
+
+
 def resolve_cvp_html_path() -> Path:
     for candidate in CVP_HTML_CANDIDATES:
         if candidate.exists():
@@ -137,6 +156,8 @@ def resolve_theme_css_path() -> Path:
     return THEME_CSS_CANDIDATES[0]
 
 
+OTD_HTML_PATH = resolve_otd_html_path()
+OTD_POLICY_PATH = resolve_otd_policy_path()
 CVP_HTML_PATH = resolve_cvp_html_path()
 CVP_POLICY_PATH = resolve_cvp_policy_path()
 THEME_CSS_PATH = resolve_theme_css_path()
@@ -209,6 +230,14 @@ APP_REGISTRY: list[dict[str, Any]] = [
         "description": "Paper trading workspace with owners, portfolios, simulated orders, and stock analysis.",
         "type": "internal",
         "open_path": VPM_PATH,
+    },
+    {
+        "id": "otd",
+        "name": "OTD · Out-the-Door Estimator",
+        "description": "Out-the-door vehicle pricing calculator. Independent from the portfolio app.",
+        "type": "static_html",
+        "open_path": OTD_PATH,
+        "file_path": OTD_HTML_PATH,
     },
     {
         "id": "cvp",
@@ -3124,7 +3153,7 @@ async def legacy_vpm_redirect(request):
 
 async def legacy_otd_redirect(request):
     query_string = request.url.query
-    target = f"{CVP_PATH}?{query_string}" if query_string else CVP_PATH
+    target = f"{OTD_PATH}?{query_string}" if query_string else OTD_PATH
     return RedirectResponse(url=target, status_code=308)
 
 
@@ -3134,13 +3163,39 @@ async def legacy_tracker_redirect(request):
     return RedirectResponse(url=target, status_code=308)
 
 
-async def cvp_tool(request):
-    otd_app_config = get_app_by_id("cvp") or {}
+async def otd_tool(request):
+    otd_app_config = get_app_by_id("otd") or {}
     otd_path = otd_app_config.get("file_path")
     if not isinstance(otd_path, Path):
-        otd_path = CVP_HTML_PATH
+        otd_path = OTD_HTML_PATH
 
     if not otd_path.exists():
+        return HTMLResponse(
+            f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>OTD Tool</title></head>"
+            f"<body style='font-family:Inter,sans-serif;padding:24px;'>"
+            f"<h1>OTD Tool not found</h1>"
+            f"<p>Expected file: <strong>apps/OTD/otd_estimator.html</strong></p>"
+            f"<p><a href='{ROOT_PATH}'>Back to Home</a></p>"
+            f"</body></html>",
+            status_code=404,
+        )
+
+    content = otd_path.read_text(encoding="utf-8")
+    content = (
+        content.replace("__COREPORTAL_ASSET_THEME_PATH__", ASSET_THEME_PATH)
+        .replace("__COREPORTAL_ROOT_PATH__", ROOT_PATH)
+        .replace("__COREPORTAL_OTD_POLICY_PATH__", f"{OTD_PATH}/policy_years.json")
+    )
+    return HTMLResponse(content)
+
+
+async def cvp_tool(request):
+    cvp_app_config = get_app_by_id("cvp") or {}
+    cvp_path = cvp_app_config.get("file_path")
+    if not isinstance(cvp_path, Path):
+        cvp_path = CVP_HTML_PATH
+
+    if not cvp_path.exists():
         return HTMLResponse(
             f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>CVP Tool</title></head>"
             f"<body style='font-family:Inter,sans-serif;padding:24px;'>"
@@ -3151,17 +3206,13 @@ async def cvp_tool(request):
             status_code=404,
         )
 
-    content = otd_path.read_text(encoding="utf-8")
+    content = cvp_path.read_text(encoding="utf-8")
     content = (
         content.replace("__COREPORTAL_ASSET_THEME_PATH__", ASSET_THEME_PATH)
         .replace("__COREPORTAL_ROOT_PATH__", ROOT_PATH)
         .replace("__COREPORTAL_OTD_POLICY_PATH__", f"{CVP_PATH}/policy_years.json")
     )
     return HTMLResponse(content)
-
-
-async def otd_tool(request):
-    return await cvp_tool(request)
 
 
 async def coreportal_theme_css(request):
@@ -3175,6 +3226,22 @@ async def coreportal_theme_css(request):
 }
 """.strip(),
         media_type="text/css",
+    )
+
+
+async def otd_policy_years(request):
+    if OTD_POLICY_PATH.exists():
+        return FileResponse(OTD_POLICY_PATH, media_type="application/json")
+    return JSONResponse(
+        {
+            "2025": {
+                "taxRate": 6.625,
+                "lfisRate": 0.4,
+                "lfisThreshold": 45000,
+                "dmvPlusTitle": 144,
+                "plate": 5,
+            }
+        }
     )
 
 
@@ -4193,11 +4260,11 @@ app = Starlette(
         Route(f"{TRACKER_PATH}/entry/add", tracker_entry_add, methods=["POST"]),
         Route(f"{TRACKER_PATH}/transfer-to-vpm", tracker_transfer_to_vpm, methods=["POST"]),
         Route(f"{TRACKER_PATH}/zeroize", tracker_zeroize, methods=["POST"]),
+        Route(OTD_PATH, otd_tool, methods=["GET"]),
+        Route(f"{OTD_PATH}/policy_years.json", otd_policy_years, methods=["GET"]),
+        Route(with_base_path("/otd/policy_years.json"), otd_policy_years, methods=["GET"]),
         Route(CVP_PATH, cvp_tool, methods=["GET"]),
         Route(f"{CVP_PATH}/policy_years.json", cvp_policy_years, methods=["GET"]),
-        Route(OTD_PATH, legacy_otd_redirect, methods=["GET"]),
-        Route(f"{OTD_PATH}/policy_years.json", cvp_policy_years, methods=["GET"]),
-        Route(with_base_path("/otd/policy_years.json"), cvp_policy_years, methods=["GET"]),
         Route(with_base_path("/portfolio"), legacy_vpm_redirect, methods=["GET"]),
         Route(with_base_path("/otd"), legacy_otd_redirect, methods=["GET"]),
         Route(with_base_path("/TRACKER"), legacy_tracker_redirect, methods=["GET"]),
