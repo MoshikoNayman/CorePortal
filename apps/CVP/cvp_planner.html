@@ -13,6 +13,12 @@
       --ink: #132748;
       --muted: #5f7292;
       --line: #d2dceb;
+      --calc-bg: #eaf6ff;
+      --calc-line: #9fc8ef;
+      --view-bg: #f6f8fc;
+      --view-line: #c9d3e4;
+      --auto-bg: #eefbf2;
+      --auto-line: #9ad0aa;
       --brand: #1158d5;
       --brand-strong: #0b3f9f;
       --shadow: 0 12px 30px rgba(14, 36, 86, 0.09);
@@ -142,6 +148,26 @@
       padding: 10px;
     }
 
+    .field.calc {
+      background: var(--calc-bg);
+      border-color: var(--calc-line);
+    }
+
+    .field.view {
+      background: var(--view-bg);
+      border-color: var(--view-line);
+    }
+
+    .field.auto {
+      background: var(--auto-bg);
+      border-color: var(--auto-line);
+    }
+
+    .readonly-input {
+      background: #f3f5fa;
+      color: #4d5e79;
+    }
+
     .field.wide { grid-column: 1 / -1; }
 
     .field label {
@@ -253,6 +279,33 @@
       font-size: 12px;
       color: var(--muted);
       line-height: 1.45;
+    }
+
+    .mode-key {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      background: #fff;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
     }
 
     .years-grid {
@@ -372,26 +425,36 @@
             <button class="btn primary" id="loadAcadiaBtn" type="button">Load My Acadia Baseline</button>
           </div>
           <p class="desc">Hybrid approach: use dropdowns for common drivetrain/transmission patterns, plus free text for details you care about.</p>
+          <div class="mode-key">
+            <span class="mode-pill"><span class="swatch" style="background: var(--calc-bg);"></span>Impacts TCO</span>
+            <span class="mode-pill"><span class="swatch" style="background: var(--view-bg);"></span>Profile / view only</span>
+            <span class="mode-pill"><span class="swatch" style="background: var(--auto-bg);"></span>Auto generated</span>
+          </div>
 
           <div class="grid">
-            <div class="field"><label for="base_year">Year</label><input id="base_year" type="number" value="2019" min="1980" max="2100" /></div>
-            <div class="field"><label for="base_make">Make</label><input id="base_make" type="text" value="GMC" /></div>
-            <div class="field"><label for="base_model">Model</label><input id="base_model" type="text" value="Acadia" /></div>
-            <div class="field"><label for="base_trim">Trim</label><input id="base_trim" type="text" value="SLE2" /></div>
-            <div class="field"><label for="base_engine">Engine</label><input id="base_engine" type="text" value="6 Cyl 3.6L" /></div>
-            <div class="field"><label for="base_mileage">Mileage Today</label><input id="base_mileage" type="number" value="75472" min="0" step="1" /></div>
-            <div class="field"><label for="base_drivetrain">Drivetrain</label><select id="base_drivetrain"><option>FWD</option><option selected>AWD</option><option>RWD</option><option>4WD</option></select></div>
-            <div class="field"><label for="base_transmission">Transmission</label><select id="base_transmission"><option>Automatic</option><option selected>6-Speed Automatic</option><option>8-Speed Automatic</option><option>10-Speed Automatic</option><option>CVT</option><option>Manual</option></select></div>
-            <div class="field wide"><label for="base_transmission_code">Transmission Detail (free text)</label><input id="base_transmission_code" type="text" value="6T70, AWD" /><small>Use this for exact package identifiers or notes.</small></div>
-            <div class="field"><label for="base_value_now">Offer / Trade-In Value Now ($)</label><input id="base_value_now" type="number" value="13500" min="0" step="100" /></div>
-            <div class="field"><label for="annual_miles">Driving Per Year</label><input id="annual_miles" type="number" value="12000" min="0" step="100" /></div>
-            <div class="field"><label for="fuel_price">Fuel Price ($/gal)</label><input id="fuel_price" type="number" value="3.50" min="0" step="0.01" /></div>
-            <div class="field"><label for="base_mpg">Baseline MPG</label><input id="base_mpg" type="number" value="21" min="1" step="1" /></div>
-            <div class="field"><label for="base_payment">Current Loan Payment ($/mo)</label><input id="base_payment" type="number" value="0" min="0" step="10" /></div>
-            <div class="field"><label for="base_insurance">Current Insurance ($/mo)</label><input id="base_insurance" type="number" value="170" min="0" step="5" /></div>
-            <div class="field"><label for="base_maintenance">Current Maintenance ($/mo)</label><input id="base_maintenance" type="number" value="210" min="0" step="5" /></div>
-            <div class="field"><label for="base_repair_risk">Repair Risk Escalation (%/year)</label><input id="base_repair_risk" type="number" value="7" min="0" step="0.1" /><small>Increases keep-car monthly running costs each year.</small></div>
-            <div class="field"><label for="income">Gross Monthly Income ($)</label><input id="income" type="number" value="12000" min="0" step="100" /></div>
+            <div class="field view"><label for="base_year">Year</label><input id="base_year" type="number" value="2019" min="1980" max="2100" /></div>
+            <div class="field view"><label for="base_make">Make</label><input id="base_make" type="text" value="GMC" /></div>
+            <div class="field view"><label for="base_model">Model</label><input id="base_model" type="text" value="Acadia" /></div>
+            <div class="field view"><label for="base_trim">Trim</label><input id="base_trim" type="text" value="SLE2" /></div>
+            <div class="field view"><label for="base_engine">Engine (view only)</label><input id="base_engine" class="readonly-input" type="text" value="6 Cyl 3.6L" readonly /></div>
+            <div class="field calc"><label for="base_mileage">Mileage Today</label><input id="base_mileage" type="number" value="75472" min="0" step="1" /></div>
+            <div class="field view"><label for="base_drivetrain">Drivetrain</label><select id="base_drivetrain"><option>FWD</option><option selected>AWD</option><option>RWD</option><option>4WD</option></select></div>
+            <div class="field view"><label for="base_transmission">Transmission</label><select id="base_transmission"><option>Automatic</option><option selected>6-Speed Automatic</option><option>8-Speed Automatic</option><option>10-Speed Automatic</option><option>CVT</option><option>Manual</option></select></div>
+            <div class="field view wide"><label for="base_transmission_code">Transmission Detail (free text)</label><input id="base_transmission_code" type="text" value="6T70, AWD" /><small>Use this for exact package identifiers or notes.</small></div>
+            <div class="field calc"><label for="base_value_now">Offer / Trade-In Value Now ($)</label><input id="base_value_now" type="number" value="13500" min="0" step="100" /></div>
+            <div class="field calc"><label for="annual_miles">Driving Per Year</label><input id="annual_miles" type="number" value="12000" min="0" step="100" /></div>
+            <div class="field calc"><label for="fuel_price">Fuel Price ($/gal)</label><input id="fuel_price" type="number" value="3.50" min="0" step="0.01" /></div>
+            <div class="field calc"><label for="base_mpg">Baseline MPG</label><input id="base_mpg" type="number" value="21" min="1" step="1" /></div>
+            <div class="field calc"><label for="base_payment">Current Loan Payment ($/mo)</label><input id="base_payment" type="number" value="0" min="0" step="10" /></div>
+            <div class="field calc"><label for="base_insurance">Current Insurance ($/mo)</label><input id="base_insurance" type="number" value="170" min="0" step="5" /></div>
+            <div class="field calc"><label for="base_maintenance">Maintenance ($/mo)</label><input id="base_maintenance" type="number" value="150" min="0" step="5" /></div>
+            <div class="field calc"><label for="base_repairs">Repairs Reserve ($/mo)</label><input id="base_repairs" type="number" value="60" min="0" step="5" /></div>
+            <div class="field calc"><label for="base_repair_risk">Repairs Escalation (%/year)</label><input id="base_repair_risk" type="number" value="7" min="0" step="0.1" /><small>Increases keep-car monthly running costs each year.</small></div>
+            <div class="field calc"><label for="base_depreciation">Baseline Depreciation (%/year)</label><input id="base_depreciation" type="number" value="10" min="0" max="30" step="0.1" /></div>
+            <div class="field calc"><label for="income">Gross Monthly Income ($)</label><input id="income" type="number" value="12000" min="0" step="100" /></div>
+            <div class="field auto"><label for="base_monthly_fuel_auto">Auto Fuel Cost ($/mo)</label><input id="base_monthly_fuel_auto" class="readonly-input" type="text" value="$0" readonly /></div>
+            <div class="field auto"><label for="base_yearly_fuel_auto">Auto Fuel Cost ($/year)</label><input id="base_yearly_fuel_auto" class="readonly-input" type="text" value="$0" readonly /></div>
+            <div class="field auto"><label for="base_value_7y_auto">Projected Baseline Value @ 7y</label><input id="base_value_7y_auto" class="readonly-input" type="text" value="$0" readonly /></div>
           </div>
         </section>
 
@@ -521,12 +584,12 @@
 
     function baselineTcoAtYears(years, ctx) {
       const months = years * 12;
-      const runningBase = ctx.basePayment + ctx.baseInsurance + ctx.baseMaintenance + fuelMonthly(ctx.annualMiles, ctx.baseMpg, ctx.fuelPrice);
+      const runningBase = ctx.basePayment + ctx.baseInsurance + ctx.baseMaintenance + ctx.baseRepairs + fuelMonthly(ctx.annualMiles, ctx.baseMpg, ctx.fuelPrice);
       const escalationFactor = Math.pow(1 + (ctx.baseRepairRisk / 100), Math.max(0, years - 1));
       const runningAdjusted = runningBase * escalationFactor;
       const total = runningAdjusted * months;
 
-      const yearlyDep = 0.10;
+      const yearlyDep = Math.min(Math.max(ctx.baseDepreciation / 100, 0), 0.30);
       const endValue = Math.max(ctx.baseValueNow * Math.pow(1 - yearlyDep, years), 1500);
       return {
         tco: total - endValue,
@@ -700,10 +763,19 @@
         basePayment: num('base_payment'),
         baseInsurance: num('base_insurance'),
         baseMaintenance: num('base_maintenance'),
+        baseRepairs: num('base_repairs'),
         baseRepairRisk: num('base_repair_risk'),
+        baseDepreciation: num('base_depreciation'),
         baseValueNow: num('base_value_now'),
         income: num('income')
       };
+
+      const autoFuelMonthly = fuelMonthly(ctx.annualMiles, ctx.baseMpg, ctx.fuelPrice);
+      const autoFuelYearly = autoFuelMonthly * 12;
+      const auto7y = Math.max(ctx.baseValueNow * Math.pow(1 - Math.min(Math.max(ctx.baseDepreciation / 100, 0), 0.30), 7), 1500);
+      document.getElementById('base_monthly_fuel_auto').value = fmtUsd(autoFuelMonthly);
+      document.getElementById('base_yearly_fuel_auto').value = fmtUsd(autoFuelYearly);
+      document.getElementById('base_value_7y_auto').value = fmtUsd(auto7y);
 
       const baselineName = baselineLabel();
       const baselineScenario = {
@@ -777,6 +849,8 @@
       lines.push('Baseline profile: ' + baselineName);
       lines.push('Offer / trade-in now: ' + fmtUsd(ctx.baseValueNow));
       lines.push('Annual miles: ' + (ctx.annualMiles || 0).toLocaleString() + ' | Fuel: $' + (ctx.fuelPrice || 0).toFixed(2) + '/gal');
+      lines.push('Baseline factors: MPG ' + ctx.baseMpg.toFixed(1) + ', Insurance ' + fmtUsd(ctx.baseInsurance) + '/mo, Maintenance ' + fmtUsd(ctx.baseMaintenance) + '/mo, Repairs ' + fmtUsd(ctx.baseRepairs) + '/mo');
+      lines.push('Depreciation assumption: ' + ctx.baseDepreciation.toFixed(1) + '%/year | 7y projected value: ' + fmtUsd(auto7y));
       lines.push('');
 
       HORIZONS.forEach((year) => {
