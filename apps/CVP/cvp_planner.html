@@ -120,6 +120,17 @@
       margin-bottom: 10px;
     }
 
+    .title-row.controls-left {
+      justify-content: flex-start;
+      align-items: flex-start;
+    }
+
+    .title-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .btn {
       border: 1px solid var(--line);
       background: #f7faff;
@@ -424,15 +435,15 @@
     <div class="layout">
       <div class="stack">
         <section class="card">
-          <div class="title-row">
+          <div class="title-row controls-left">
             <h2>1) Baseline Car (Keep Scenario)</h2>
-            <div>
+            <div class="title-actions">
               <button class="btn" id="importFleetCsvBtn" type="button">Import Baseline + Cars CSV</button>
               <button class="btn" id="downloadTemplateBtn" type="button">Download CSV Template</button>
               <button class="btn primary" id="loadSampleBaselineBtn" type="button">Load Sample Baseline</button>
             </div>
           </div>
-          <p class="desc">Hybrid approach: use dropdowns for common drivetrain/transmission patterns, plus free text for details you care about.</p>
+          <p class="desc">Use dropdowns for common drivetrain/transmission types, plus free text for exact vehicle details.</p>
           <div class="mode-key">
             <span class="mode-pill"><span class="swatch" style="background: var(--calc-bg);"></span>Impacts TCO</span>
             <span class="mode-pill"><span class="swatch" style="background: var(--view-bg);"></span>Profile / view only</span>
@@ -498,9 +509,9 @@
     </div>
 
     <section class="card compare-card-full">
-      <div class="title-row">
+      <div class="title-row controls-left">
         <h2>2) Cars To Compare (Add New/Used)</h2>
-        <div>
+        <div class="title-actions">
           <button class="btn" id="loadExampleBtn" type="button">Load Example Candidates</button>
           <button class="btn primary" id="exportReportBtn" type="button">Export Full Report CSV</button>
         </div>
