@@ -542,12 +542,12 @@
         <h2>2) Cars To Compare (Add New/Used)</h2>
         <div class="title-actions">
           <button class="btn" id="loadMixedExamplesBtn" type="button">Load Mixed Examples</button>
-          <button class="btn" id="loadNewExamplesBtn" type="button">Load 2026 New Examples</button>
+          <button class="btn" id="loadTemplateCarsBtn" type="button">Load Template Cars</button>
           <button class="btn" id="autofillMissingBtn" type="button">Auto-Fill Missing</button>
           <button class="btn" id="clearExamplesBtn" type="button">Clear Candidate Rows</button>
         </div>
       </div>
-      <p class="desc">Full-width editor for all imported rows. Required for accurate math: Type, Price, APR, Term. Name is strongly recommended. Everything else is optional and can be auto-estimated.</p>
+      <p class="desc">Full-width editor for all imported rows. Use Load Template Cars to populate the entire list, then select with Use checkboxes. Required for accurate math: Type, Price, APR, Term.</p>
 
       <div class="table-wrap">
         <table class="compare-table" id="compareTable">
@@ -670,8 +670,8 @@
       URL.revokeObjectURL(url);
     }
 
-    function downloadFleetTemplateCsv() {
-      const rows = [
+    function getFleetTemplateRows() {
+      return [
         ['section','enabled','name','type','year','make','model','trim','engine','mileage','drivetrain','transmission','transmission_code','value_now','annual_miles','fuel_price','mpg','payment','insurance','maintenance','repairs','repair_risk','depreciation','income','price','fees','apr','term','resalePct7','upfront','start_price','real_world_avg','max_price','hp','cyl','notes'],
         ['baseline','','Current Car','','2019','GMC','Acadia','SLE2','6 Cyl 3.6L','75472','AWD','6-Speed Automatic','6T70, AWD','13500','12000','3.5','21','0','170','150','60','7','10','12000','','','','','','','','','','','Fill this row with your real current car data'],
         ['candidate','true','2026 Toyota Highlander LE','new','2026','Toyota','Highlander','LE','4-cyl turbo','0','AWD','Automatic','','','12000','3.5','24','0','225','130','45','6','11','12000','47500','3500','5.2','72','51','0','39820','47500','53975','265','4','Imported candidate example'],
@@ -696,6 +696,10 @@
         ['reference','','2026 Dodge Durango R/T (V8)','new','2026','Dodge','Durango','R/T','V8','0','AWD','Automatic','','','12000','3.5','17','0','295','210','70','7','12','12000','60500','4200','6.2','72','43','0','56490','60500','66000','360','8','Reference row'],
         ['reference','','2026 Tesla Model X (3-row capable)','new','2026','Tesla','Model X','3-row','EV','0','AWD','Single-Speed','','','12000','0.16','95','0','320','140','40','4','13','12000','89000','2500','6.4','72','50','0','79990','89000','99990','EV','EV','Reference row; mpg column uses MPGe equivalent']
       ];
+    }
+
+    function downloadFleetTemplateCsv() {
+      const rows = getFleetTemplateRows();
       downloadCsv('cvp_import_template.csv', rows);
     }
 
@@ -1149,86 +1153,91 @@
       calc();
     }
 
+    function applyFleetRows(rows, options) {
+      if (!rows || !rows.length) return;
+
+      const opts = Object.assign({ applyBaseline: true, applyCandidates: true }, options || {});
+      const header = rows[0].map((h) => (h || '').trim());
+      const idx = {};
+      header.forEach((h, i) => { idx[h.toLowerCase()] = i; });
+
+      const hasHeader = idx.section !== undefined;
+      const start = hasHeader ? 1 : 0;
+      const importedCandidates = [];
+
+      for (let r = start; r < rows.length; r += 1) {
+        const row = rows[r];
+        if (!row.length) continue;
+        const section = String(row[idx.section] || '').toLowerCase();
+
+        if (opts.applyBaseline && section === 'baseline') {
+          const set = (key, id) => {
+            if (idx[key] === undefined) return;
+            const v = row[idx[key]];
+            if (v === undefined || v === '') return;
+            const el = document.getElementById(id);
+            if (el) el.value = v;
+          };
+
+          set('year', 'base_year');
+          set('make', 'base_make');
+          set('model', 'base_model');
+          set('trim', 'base_trim');
+          set('engine', 'base_engine');
+          set('mileage', 'base_mileage');
+          set('drivetrain', 'base_drivetrain');
+          set('transmission', 'base_transmission');
+          set('transmission_code', 'base_transmission_code');
+          set('value_now', 'base_value_now');
+          set('annual_miles', 'annual_miles');
+          set('fuel_price', 'fuel_price');
+          set('mpg', 'base_mpg');
+          set('payment', 'base_payment');
+          set('insurance', 'base_insurance');
+          set('maintenance', 'base_maintenance');
+          set('repairs', 'base_repairs');
+          set('repair_risk', 'base_repair_risk');
+          set('depreciation', 'base_depreciation');
+          set('income', 'income');
+        }
+
+        if (opts.applyCandidates && (section === 'candidate' || section === 'reference')) {
+          const autoEnabled = section === 'candidate';
+          const enabled = idx.enabled !== undefined ? csvBool(row[idx.enabled]) : autoEnabled;
+          const fallbackName = `${section === 'reference' ? 'Reference' : 'Candidate'} ${importedCandidates.length + 1}`;
+
+          importedCandidates.push(normalizeCandidateRow({
+            enabled,
+            name: idx.name !== undefined ? row[idx.name] : fallbackName,
+            type: idx.type !== undefined ? row[idx.type] : 'used',
+            price: idx.price !== undefined ? row[idx.price] : 0,
+            fees: idx.fees !== undefined ? row[idx.fees] : '',
+            apr: idx.apr !== undefined ? row[idx.apr] : '',
+            term: idx.term !== undefined ? row[idx.term] : '',
+            mpg: idx.mpg !== undefined ? row[idx.mpg] : '',
+            insurance: idx.insurance !== undefined ? row[idx.insurance] : '',
+            maintenance: idx.maintenance !== undefined ? row[idx.maintenance] : '',
+            resalePct7: idx.resalepct7 !== undefined ? row[idx.resalepct7] : '',
+            upfront: idx.upfront !== undefined ? row[idx.upfront] : ''
+          }, fallbackName, false));
+        }
+      }
+
+      if (importedCandidates.length) {
+        candidateDefaults.length = 0;
+        importedCandidates.forEach((c) => candidateDefaults.push(c));
+        renderCandidates();
+        bindInputs();
+      }
+
+      calc();
+    }
+
     function importFleetCsv(file) {
       const reader = new FileReader();
       reader.onload = () => {
         const rows = parseCsv(reader.result || '');
-        if (!rows.length) return;
-
-        const header = rows[0].map((h) => (h || '').trim());
-        const idx = {};
-        header.forEach((h, i) => { idx[h.toLowerCase()] = i; });
-
-        const hasHeader = idx.section !== undefined;
-        const start = hasHeader ? 1 : 0;
-        const importedCandidates = [];
-
-        for (let r = start; r < rows.length; r += 1) {
-          const row = rows[r];
-          if (!row.length) continue;
-          const section = String(row[idx.section] || '').toLowerCase();
-
-          if (section === 'baseline') {
-            const set = (key, id) => {
-              if (idx[key] === undefined) return;
-              const v = row[idx[key]];
-              if (v === undefined || v === '') return;
-              const el = document.getElementById(id);
-              if (el) el.value = v;
-            };
-
-            set('year', 'base_year');
-            set('make', 'base_make');
-            set('model', 'base_model');
-            set('trim', 'base_trim');
-            set('engine', 'base_engine');
-            set('mileage', 'base_mileage');
-            set('drivetrain', 'base_drivetrain');
-            set('transmission', 'base_transmission');
-            set('transmission_code', 'base_transmission_code');
-            set('value_now', 'base_value_now');
-            set('annual_miles', 'annual_miles');
-            set('fuel_price', 'fuel_price');
-            set('mpg', 'base_mpg');
-            set('payment', 'base_payment');
-            set('insurance', 'base_insurance');
-            set('maintenance', 'base_maintenance');
-            set('repairs', 'base_repairs');
-            set('repair_risk', 'base_repair_risk');
-            set('depreciation', 'base_depreciation');
-            set('income', 'income');
-          }
-
-          if (section === 'candidate' || section === 'reference') {
-            const autoEnabled = section === 'candidate';
-            const enabled = idx.enabled !== undefined ? csvBool(row[idx.enabled]) : autoEnabled;
-            const fallbackName = `${section === 'reference' ? 'Reference' : 'Candidate'} ${importedCandidates.length + 1}`;
-
-            importedCandidates.push(normalizeCandidateRow({
-              enabled,
-              name: idx.name !== undefined ? row[idx.name] : fallbackName,
-              type: idx.type !== undefined ? row[idx.type] : 'used',
-              price: idx.price !== undefined ? row[idx.price] : 0,
-              fees: idx.fees !== undefined ? row[idx.fees] : '',
-              apr: idx.apr !== undefined ? row[idx.apr] : '',
-              term: idx.term !== undefined ? row[idx.term] : '',
-              mpg: idx.mpg !== undefined ? row[idx.mpg] : '',
-              insurance: idx.insurance !== undefined ? row[idx.insurance] : '',
-              maintenance: idx.maintenance !== undefined ? row[idx.maintenance] : '',
-              resalePct7: idx.resalepct7 !== undefined ? row[idx.resalepct7] : '',
-              upfront: idx.upfront !== undefined ? row[idx.upfront] : ''
-            }, fallbackName, false));
-          }
-        }
-
-        if (importedCandidates.length) {
-          candidateDefaults.length = 0;
-          importedCandidates.forEach((c) => candidateDefaults.push(c));
-          renderCandidates();
-          bindInputs();
-        }
-
-        calc();
+        applyFleetRows(rows, { applyBaseline: true, applyCandidates: true });
       };
       reader.readAsText(file);
     }
@@ -1260,13 +1269,9 @@
       ]);
     }
 
-    function loadNewExamples() {
-      setCandidates([
-        { enabled: true, name: '2026 Kia Telluride EX X-Line (New)', type: 'new', price: 44500, fees: 3200, apr: 5.9, term: 72, mpg: 22, insurance: 240, maintenance: 145, resalePct7: 50, upfront: 0 },
-        { enabled: true, name: '2026 Nissan Pathfinder SL (New)', type: 'new', price: 44500, fees: 3000, apr: 5.9, term: 72, mpg: 23, insurance: 230, maintenance: 140, resalePct7: 49, upfront: 0 },
-        { enabled: true, name: '2026 Toyota Grand Highlander XLE (New)', type: 'new', price: 50500, fees: 3500, apr: 5.9, term: 72, mpg: 24, insurance: 245, maintenance: 145, resalePct7: 50, upfront: 0 },
-        { enabled: true, name: '2026 GMC Acadia Elevation (New)', type: 'new', price: 52000, fees: 3600, apr: 5.9, term: 72, mpg: 23, insurance: 250, maintenance: 155, resalePct7: 48, upfront: 0 }
-      ]);
+    function loadTemplateCars() {
+      const rows = getFleetTemplateRows();
+      applyFleetRows(rows, { applyBaseline: false, applyCandidates: true });
     }
 
     function clearCandidates() {
@@ -1295,7 +1300,7 @@
         e.target.value = '';
       });
       document.getElementById('loadMixedExamplesBtn').addEventListener('click', loadMixedExamples);
-      document.getElementById('loadNewExamplesBtn').addEventListener('click', loadNewExamples);
+      document.getElementById('loadTemplateCarsBtn').addEventListener('click', loadTemplateCars);
       document.getElementById('autofillMissingBtn').addEventListener('click', autofillMissingCandidates);
       document.getElementById('clearExamplesBtn').addEventListener('click', clearCandidates);
       calc();
