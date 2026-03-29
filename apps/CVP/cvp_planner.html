@@ -460,7 +460,7 @@
             <div class="field auto"><label for="base_yearly_fuel_auto">Auto Fuel Cost ($/year)</label><input id="base_yearly_fuel_auto" class="readonly-input" type="text" value="$0" readonly /></div>
             <div class="field auto"><label for="base_value_7y_auto">Projected Baseline Value @ 7y</label><input id="base_value_7y_auto" class="readonly-input" type="text" value="$0" readonly /></div>
           </div>
-          <div class="mini-note">CSV import supports one spreadsheet with mixed rows: set <strong>section</strong> to <strong>baseline</strong> or <strong>candidate</strong>. Use the template button to get the exact format.</div>
+          <div class="mini-note">CSV import supports one spreadsheet with mixed rows: use <strong>baseline</strong> and <strong>candidate</strong> for real imports. The template also includes <strong>reference</strong> rows with market examples that are ignored until you convert them into candidate rows.</div>
           <input id="fleetCsvInput" type="file" accept=".csv,text/csv" style="display:none;" />
         </section>
 
@@ -611,11 +611,28 @@
 
     function downloadFleetTemplateCsv() {
       const rows = [
-        ['section','enabled','name','type','year','make','model','trim','engine','mileage','drivetrain','transmission','transmission_code','value_now','annual_miles','fuel_price','mpg','payment','insurance','maintenance','repairs','repair_risk','depreciation','income','price','fees','apr','term','resalePct7','upfront'],
-        ['baseline','','Current Car','','2019','GMC','Acadia','SLE2','6 Cyl 3.6L','75472','AWD','6-Speed Automatic','6T70, AWD','13500','12000','3.5','21','0','170','150','60','7','10','12000','','','','','',''],
-        ['candidate','true','2024 Toyota Highlander LE','new','','','','','','','','','','','','','','','','','','','','','42600','3500','5.2','72','51','0'],
-        ['candidate','true','2022 Honda Pilot EX-L','used','','','','','','','','','','','','','','','','','','','','','31500','2200','6.4','60','50','0'],
-        ['candidate','false','2025 Mercedes-AMG GLA 45 S','new','','','','','','3500','','','','','','','','','','','','','','','62000','4200','5.8','72','55','0']
+        ['section','enabled','name','type','year','make','model','trim','engine','mileage','drivetrain','transmission','transmission_code','value_now','annual_miles','fuel_price','mpg','payment','insurance','maintenance','repairs','repair_risk','depreciation','income','price','fees','apr','term','resalePct7','upfront','start_price','real_world_avg','max_price','hp','cyl','notes'],
+        ['baseline','','Current Car','','2019','GMC','Acadia','SLE2','6 Cyl 3.6L','75472','AWD','6-Speed Automatic','6T70, AWD','13500','12000','3.5','21','0','170','150','60','7','10','12000','','','','','','','','','','','Fill this row with your real current car data'],
+        ['candidate','true','Toyota Highlander','new','','Toyota','Highlander','LE','','','','','','','','','','','','','','','','','47500','3500','5.2','72','51','0','39820','47500','53975','265','4','Imported candidate example'],
+        ['candidate','true','Honda Pilot','used','','Honda','Pilot','EX-L','','','','','','','','','','','','','','','','','48500','2200','6.4','60','50','0','40200','48500','55675','285','6','Imported candidate example'],
+        ['reference','','Kia Telluride','','','Kia','Telluride','','','','','','','','','','','','','','','','','','','','','','','','36390','44500','53385','291','6','Reference row only: change section to candidate and fill TCO fields to import'],
+        ['reference','','Nissan Pathfinder','','','Nissan','Pathfinder','','','','','','','','','','','','','','','','','','','','','','','','37790','44500','50640','284-295','6','Reference row only'],
+        ['reference','','Hyundai Palisade','','','Hyundai','Palisade','','','','','','','','','','','','','','','','','','','','','','','','38675','46500','55975','291','6','Reference row only'],
+        ['reference','','Subaru Ascent','','','Subaru','Ascent','','','','','','','','','','','','','','','','','','','','','','','','38910','45000','51165','260','4','Reference row only'],
+        ['reference','','Mazda CX-90','','','Mazda','CX-90','','','','','','','','','','','','','','','','','','','','','','','','39300','48500','57905','280-340','6','Reference row only'],
+        ['reference','','VW Atlas','','','Volkswagen','Atlas','','','','','','','','','','','','','','','','','','','','','','','','39625','47500','54630','269','4','Reference row only'],
+        ['reference','','Ford Explorer','','','Ford','Explorer','','','','','','','','','','','','','','','','','','','','','','','','39755','48500','55505','300-400','4/6','Reference row only'],
+        ['reference','','Toyota Highlander','','','Toyota','Highlander','','','','','','','','','','','','','','','','','','','','','','','','39820','47500','53975','265','4','Reference row only'],
+        ['reference','','Chevrolet Traverse','','','Chevrolet','Traverse','','','','','','','','','','','','','','','','','','','','','','','','39995','49000','56795','328','4','Reference row only'],
+        ['reference','','Jeep Grand Cherokee L','','','Jeep','Grand Cherokee L','','','','','','','','','','','','','','','','','','','','','','','','40035','52000','64000','293','6','Reference row only'],
+        ['reference','','Honda Pilot','','','Honda','Pilot','','','','','','','','','','','','','','','','','','','','','','','','40200','48500','55675','285','6','Reference row only'],
+        ['reference','','Toyota Grand Highlander','','','Toyota','Grand Highlander','','','','','','','','','','','','','','','','','','','','','','','','40860','50500','58775','265-362','4','Reference row only'],
+        ['reference','','Dodge Durango (V6 trims)','','','Dodge','Durango','V6','','','','','','','','','','','','','','','','','','','','','','','','41995','49500','57000','293','6','Reference row only'],
+        ['reference','','Tesla Model Y (7-seat config)','','','Tesla','Model Y','7-seat','','','','','','','','','','','','','','','','','','','','','','','','43000','49500','57500','EV','EV','Reference row only'],
+        ['reference','','GMC Acadia','','','GMC','Acadia','','','','','','','','','','','','','','','','','','','','','','','','43995','52000','59195','328','4','Reference row only'],
+        ['reference','','Buick Enclave','','','Buick','Enclave','','','','','','','','','','','','','','','','','','','','','','','','46395','53500','59395','328','4','Reference row only'],
+        ['reference','','Dodge Durango R/T (V8)','','','Dodge','Durango','R/T','','','','','','','','','','','','','','','','','','','','','','','','56490','60500','66000','360','8','Reference row only'],
+        ['reference','','Tesla Model X (3-row capable)','','','Tesla','Model X','3-row','','','','','','','','','','','','','','','','','','','','','','','','79990','89000','99990','EV','EV','Reference row only']
       ];
       downloadCsv('cvp_import_template.csv', rows);
     }
