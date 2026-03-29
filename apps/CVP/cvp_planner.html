@@ -502,15 +502,17 @@
         </section>
 
         <section class="card">
-          <h2>5) Financial Snapshot</h2>
+          <div class="title-row controls-left">
+            <h2>5) Financial Snapshot</h2>
+            <div class="title-actions">
+              <button class="btn primary" id="exportReportBtn" type="button">Export Full Report CSV</button>
+            </div>
+          </div>
           <div class="summary">
             <div class="tile"><div class="k">Best At 5 Years</div><div class="v" id="best5">-</div></div>
             <div class="tile"><div class="k">Worst At 5 Years</div><div class="v" id="worst5">-</div></div>
             <div class="tile"><div class="k">5-Year Spread</div><div class="v" id="spread5">$0</div></div>
             <div class="tile"><div class="k">Best Option Burden</div><div class="v" id="bestBurden">0%</div></div>
-          </div>
-          <div class="title-actions" style="margin-top: 2px; margin-bottom: 10px;">
-            <button class="btn primary" id="exportReportBtn" type="button">Export Full Report CSV</button>
           </div>
           <div class="result" id="output"></div>
         </section>
