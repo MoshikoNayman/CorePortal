@@ -424,6 +424,7 @@
             <h2>1) Baseline Car (Keep Scenario)</h2>
             <div>
               <button class="btn" id="importFleetCsvBtn" type="button">Import Baseline + Cars CSV</button>
+              <button class="btn" id="downloadTemplateBtn" type="button">Download CSV Template</button>
               <button class="btn primary" id="loadSampleBaselineBtn" type="button">Load Sample Baseline</button>
             </div>
           </div>
@@ -459,7 +460,7 @@
             <div class="field auto"><label for="base_yearly_fuel_auto">Auto Fuel Cost ($/year)</label><input id="base_yearly_fuel_auto" class="readonly-input" type="text" value="$0" readonly /></div>
             <div class="field auto"><label for="base_value_7y_auto">Projected Baseline Value @ 7y</label><input id="base_value_7y_auto" class="readonly-input" type="text" value="$0" readonly /></div>
           </div>
-          <div class="mini-note">CSV import supports one spreadsheet with mixed rows: set <strong>section</strong> to <strong>baseline</strong> or <strong>candidate</strong>. Candidate rows fill slots A-D in order.</div>
+          <div class="mini-note">CSV import supports one spreadsheet with mixed rows: set <strong>section</strong> to <strong>baseline</strong> or <strong>candidate</strong>. Use the template button to get the exact format.</div>
           <input id="fleetCsvInput" type="file" accept=".csv,text/csv" style="display:none;" />
         </section>
 
@@ -587,6 +588,36 @@
     function csvBool(v) {
       const x = String(v || '').toLowerCase();
       return x === '1' || x === 'true' || x === 'yes' || x === 'y';
+    }
+
+    function csvEscape(v) {
+      const text = String(v ?? '');
+      if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+        return '"' + text.replace(/"/g, '""') + '"';
+      }
+      return text;
+    }
+
+    function downloadCsv(filename, rows) {
+      const content = rows.map((r) => r.map(csvEscape).join(',')).join('\n');
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadFleetTemplateCsv() {
+      const rows = [
+        ['section','enabled','name','type','year','make','model','trim','engine','mileage','drivetrain','transmission','transmission_code','value_now','annual_miles','fuel_price','mpg','payment','insurance','maintenance','repairs','repair_risk','depreciation','income','price','fees','apr','term','resalePct7','upfront'],
+        ['baseline','','Current Car','','2019','GMC','Acadia','SLE2','6 Cyl 3.6L','75472','AWD','6-Speed Automatic','6T70, AWD','13500','12000','3.5','21','0','170','150','60','7','10','12000','','','','','',''],
+        ['candidate','true','2024 Toyota Highlander LE','new','','','','','','','','','','','','','','','','','','','','','42600','3500','5.2','72','51','0'],
+        ['candidate','true','2022 Honda Pilot EX-L','used','','','','','','','','','','','','','','','','','','','','','31500','2200','6.4','60','50','0'],
+        ['candidate','false','2025 Mercedes-AMG GLA 45 S','new','','','','','','3500','','','','','','','','','','','','','','','62000','4200','5.8','72','55','0']
+      ];
+      downloadCsv('cvp_import_template.csv', rows);
     }
 
     function num(id) {
@@ -1045,6 +1076,7 @@
       bindInputs();
       document.getElementById('loadSampleBaselineBtn').addEventListener('click', loadSampleBaseline);
       document.getElementById('importFleetCsvBtn').addEventListener('click', () => document.getElementById('fleetCsvInput').click());
+      document.getElementById('downloadTemplateBtn').addEventListener('click', downloadFleetTemplateCsv);
       document.getElementById('fleetCsvInput').addEventListener('change', (e) => {
         const f = e.target.files && e.target.files[0];
         if (f) importFleetCsv(f);
