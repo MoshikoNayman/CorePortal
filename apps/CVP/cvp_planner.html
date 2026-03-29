@@ -3,638 +3,386 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CVP · Car Value Planner</title>
+  <title>CVP · Buy/Sell TCO Planner</title>
   <style>
     @import url('__COREPORTAL_ASSET_THEME_PATH__');
     :root {
-      --bg: #f4f7fb;
+      --bg: #f3f7fb;
       --card: #ffffff;
-      --ink: #11203b;
-      --muted: #5f6b85;
-      --line: #d9e1ee;
-      --brand: #2952ff;
-      --brand-soft: #edf2ff;
+      --ink: #14233e;
+      --muted: #60708d;
+      --line: #d5dfec;
+      --brand: #1e4ed8;
       --good: #0f7a34;
-      --total: #7a3e00;
-      --shadow: 0 10px 28px rgba(20, 42, 90, 0.08);
+      --warn: #a05a00;
+      --bad: #c0342b;
+      --shadow: 0 10px 30px rgba(16, 38, 88, 0.08);
     }
 
     * { box-sizing: border-box; }
 
     body {
-      font-family: var(--font-ui);
       margin: 0;
-      background: var(--bg);
+      background: radial-gradient(circle at 10% 0%, #f8fbff 0%, var(--bg) 55%);
       color: var(--ink);
+      font-family: var(--font-ui);
     }
 
     .page {
-      max-width: 1240px;
+      max-width: 1360px;
       margin: 0 auto;
       padding: 24px;
     }
 
     .hero {
-      background: linear-gradient(135deg, #13203c, #2952ff);
-      color: white;
-      padding: 24px;
+      background: linear-gradient(125deg, #0f1f3e 0%, #1f4fdc 100%);
+      color: #fff;
       border-radius: 20px;
+      padding: 24px;
       box-shadow: var(--shadow);
     }
 
-    .hero h1 {
-      margin: 0 0 8px 0;
-      font-size: 34px;
-    }
-
-    .hero p {
-      margin: 0;
-      max-width: 920px;
-      color: rgba(255,255,255,0.86);
-      line-height: 1.5;
-    }
+    .hero h1 { margin: 0; font-size: 34px; }
+    .hero p { margin: 8px 0 0 0; max-width: 980px; color: rgba(255, 255, 255, 0.9); line-height: 1.5; }
 
     .hero-meta {
+      margin-top: 14px;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
-      margin-top: 16px;
     }
 
-    .hero-badge {
-      background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.2);
+    .hero-chip {
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 13px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
     }
 
-    .hero-badge a {
-      color: #fff;
-      text-decoration: none;
-    }
+    .hero-chip a { color: #fff; text-decoration: none; }
 
-    .layout {
+    .grid {
+      margin-top: 18px;
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
+      grid-template-columns: 1.15fr 1fr;
       gap: 18px;
       align-items: start;
-      margin-top: 18px;
     }
+
+    .stack { display: grid; gap: 18px; }
 
     .card {
       background: var(--card);
-      border-radius: 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(213, 223, 236, 0.9);
       box-shadow: var(--shadow);
-      border: 1px solid rgba(217, 225, 238, 0.75);
-      padding: 18px;
+      padding: 16px;
     }
 
-    .card h2 {
-      margin: 0 0 8px 0;
-      font-size: 21px;
-    }
+    .card h2 { margin: 0; font-size: 20px; }
+    .card p { margin: 8px 0 12px 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
 
-    .card p {
-      margin: 0 0 14px 0;
+    .section-title {
+      margin: 10px 0 8px 0;
+      font-size: 11px;
+      font-weight: 800;
       color: var(--muted);
-      line-height: 1.5;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     form {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
     }
 
     .field {
-      padding: 14px;
-      border-radius: 12px;
+      border: 1px solid var(--line);
       background: #f9fbff;
-      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
     }
 
-    label {
-      font-weight: 700;
-      font-size: 13px;
-      margin-bottom: 8px;
-      display: block;
-      color: var(--ink);
-      letter-spacing: 0.02em;
-    }
+    label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+    .hint { margin-top: 4px; display: block; color: var(--muted); font-size: 11px; }
 
-    .hint {
-      display: block;
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-
-    input[type="number"],
-    select {
+    input, select {
       width: 100%;
-      font-size: 1rem;
-      padding: 11px 12px;
+      padding: 9px 10px;
+      border-radius: 9px;
       border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #fff;
+      font-size: 14px;
       color: var(--ink);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      background: #fff;
     }
 
-    input[type="number"]:focus,
-    select:focus {
-      border-color: var(--brand);
+    input:focus, select:focus {
       outline: none;
-      box-shadow: 0 0 0 4px rgba(41,82,255,0.12);
-      transform: translateY(-1px);
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(30, 78, 216, 0.12);
     }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .kpi .k { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+    .kpi .v { margin-top: 6px; font-size: 22px; font-weight: 900; }
+
+    .v.good { color: var(--good); }
+    .v.warn { color: var(--warn); }
+    .v.bad { color: var(--bad); }
 
     .result {
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
       border: 1px solid var(--line);
-      font-family: var(--font-mono);
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 340px;
+      line-height: 1.55;
       white-space: pre-wrap;
-      font-size: 0.96rem;
-      min-height: 360px;
-      color: var(--ink);
-      line-height: 1.48;
-      user-select: text;
+      font-family: var(--font-mono);
+      font-size: 13px;
     }
 
-    .result strong {
-      color: var(--total);
-      font-weight: 900;
-    }
+    .footer { margin-top: 18px; text-align: center; color: var(--muted); font-size: 12px; }
 
-    .result .total-value {
-      white-space: nowrap;
-    }
-
-    .result .total-context {
-      white-space: nowrap;
-      font-weight: 700;
-    }
-
-    .result .total-line {
-      display: inline-block;
-      white-space: nowrap;
-    }
-
-    .result .positive {
-      color: var(--good);
-      font-weight: 900;
-    }
-
-    .footer {
-      margin-top: 18px;
-      padding: 14px 4px 6px 4px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    @media (max-width: 900px) {
-      .page { padding: 14px; }
-      .layout { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 28px; }
+    @media (max-width: 980px) {
+      .page { padding: 12px; }
+      .grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 27px; }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <section class="hero">
-      <h1>CVP · Car Value Planner</h1>
+      <h1>CVP · Buy/Sell TCO Planner</h1>
       <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">by Moshiko Nayman</p>
       <p>
-        A configurable buy/replace planner for households and teams. Compare out-the-door cost, monthly ownership,
-        and affordability with tier-aware luxury/sport assumptions.
+        CVP compares two decisions: keep your current car, or sell and replace it. It calculates ownership horizon,
+        financing burden, fuel and maintenance drag, resale assumptions, and full total cost of ownership.
       </p>
       <div class="hero-meta">
-        <div class="hero-badge">FY: <span id="policyYearBadge">2025</span></div>
-        <div class="hero-badge">Year-based tax and fee settings are editable</div>
-        <div class="hero-badge"><a href="__COREPORTAL_ROOT_PATH__">Back to Home</a></div>
+        <div class="hero-chip">Decision: Keep vs Replace</div>
+        <div class="hero-chip">Model: Buy/Sell + TCO</div>
+        <div class="hero-chip"><a href="__COREPORTAL_ROOT_PATH__">Back to Home</a></div>
       </div>
     </section>
 
-    <div class="layout">
-      <section class="card">
-        <h2>Inputs</h2>
-        <p>Adjust price, discount, trade-in, fee assumptions, plus financing and lifestyle tier. The estimate refreshes immediately.</p>
-        <form id="calcForm" onsubmit="return false;">
-          <div class="field">
-      <label for="msrp">MSRP / Quote ($)</label>
-      <input type="number" id="msrp" value="67000" min="0" step="1" />
-      <span class="hint">Starting vehicle price before incentives.</span>
-    </div>
+    <div class="grid">
+      <div class="stack">
+        <section class="card">
+          <h2>Replacement Scenario</h2>
+          <p>Set replacement purchase details and financing assumptions.</p>
 
-    <div class="field">
-      <label for="discount">Discount %</label>
-      <input type="number" id="discount" value="0" min="0" max="100" step="0.01" />
-      <span class="hint">Dealer markdown applied before taxes.</span>
-    </div>
+          <div class="section-title">Buy Side</div>
+          <form onsubmit="return false;">
+            <div class="field"><label for="buy_price">Purchase Price ($)</label><input type="number" id="buy_price" value="67000" min="0" step="100" /></div>
+            <div class="field"><label for="buy_fees">Taxes + Fees ($)</label><input type="number" id="buy_fees" value="5500" min="0" step="50" /></div>
+            <div class="field"><label for="sell_current_now">Current Car Sell Value ($)</label><input type="number" id="sell_current_now" value="22000" min="0" step="100" /><span class="hint">Cash generated by selling current car now.</span></div>
+            <div class="field"><label for="down_payment">Extra Down Payment ($)</label><input type="number" id="down_payment" value="5000" min="0" step="100" /></div>
+          </form>
 
-    <div class="field">
-      <label for="tradein">Trade-in Value ($)</label>
-      <input type="number" id="tradein" value="22000" min="0" step="1" />
-      <span class="hint">Vehicle credit reducing taxable price.</span>
-    </div>
+          <div class="section-title">Financing</div>
+          <form onsubmit="return false;">
+            <div class="field"><label for="apr">Loan APR (%)</label><input type="number" id="apr" value="6.5" min="0" step="0.01" /></div>
+            <div class="field"><label for="loan_months">Loan Term (months)</label><input type="number" id="loan_months" value="60" min="1" step="1" /></div>
+            <div class="field"><label for="tier">Segment</label><select id="tier"><option value="economy">Economy</option><option value="practical" selected>Practical</option><option value="comfort">Comfort</option><option value="sport">Sport</option><option value="luxury">Luxury</option><option value="exotic">Exotic</option></select></div>
+          </form>
+        </section>
 
-    <div class="field">
-      <label for="rebate">Manufacturer Rebate ($)</label>
-      <input type="number" id="rebate" value="1000" min="0" step="1" />
-      <span class="hint">Factory incentive after fees and tax math.</span>
-    </div>
+        <section class="card">
+          <h2>Usage and Horizon</h2>
+          <p>These assumptions drive TCO realism.</p>
+          <form onsubmit="return false;">
+            <div class="field"><label for="years">Ownership Horizon (years)</label><input type="number" id="years" value="5" min="1" step="1" /></div>
+            <div class="field"><label for="annual_miles">Annual Miles</label><input type="number" id="annual_miles" value="12000" min="0" step="100" /></div>
+            <div class="field"><label for="fuel_price">Fuel Cost ($/gal)</label><input type="number" id="fuel_price" value="3.5" min="0" step="0.01" /></div>
+            <div class="field"><label for="new_mpg">New Car MPG</label><input type="number" id="new_mpg" value="27" min="1" step="1" /></div>
+            <div class="field"><label for="old_mpg">Current Car MPG</label><input type="number" id="old_mpg" value="22" min="1" step="1" /></div>
+            <div class="field"><label for="income">Gross Monthly Income ($)</label><input type="number" id="income" value="12000" min="0" step="100" /></div>
+          </form>
+        </section>
 
-    <div class="field">
-      <label for="docfee">Destination/Doc Fee ($)</label>
-      <input type="number" id="docfee" value="1000" min="0" step="1" />
-      <span class="hint">Shipping, doc, or dealer prep charges.</span>
-    </div>
+        <section class="card">
+          <h2>Keep-Car Baseline</h2>
+          <p>What happens if you keep the current vehicle.</p>
+          <form onsubmit="return false;">
+            <div class="field"><label for="old_payment">Current Loan Payment ($/mo)</label><input type="number" id="old_payment" value="0" min="0" step="10" /></div>
+            <div class="field"><label for="old_insurance">Current Insurance ($/mo)</label><input type="number" id="old_insurance" value="140" min="0" step="5" /></div>
+            <div class="field"><label for="old_maint">Current Maintenance ($/mo)</label><input type="number" id="old_maint" value="170" min="0" step="10" /></div>
+            <div class="field"><label for="old_resale_end">Expected Current-Car Value At Horizon ($)</label><input type="number" id="old_resale_end" value="9000" min="0" step="100" /></div>
+          </form>
+        </section>
+      </div>
 
-    <div class="field">
-      <label for="otherfees">Other Dealer Fees ($)</label>
-      <input type="number" id="otherfees" value="0" min="0" step="1" />
-      <span class="hint">Any misc charges you want included.</span>
-    </div>
+      <div class="stack">
+        <section class="card">
+          <h2>Decision Summary</h2>
+          <p>Replacement versus keeping your current car.</p>
+          <div class="kpis">
+            <div class="kpi"><div class="k">TCO Replace</div><div class="v" id="kpi_replace">$0</div></div>
+            <div class="kpi"><div class="k">TCO Keep</div><div class="v" id="kpi_keep">$0</div></div>
+            <div class="kpi"><div class="k">Difference</div><div class="v" id="kpi_diff">$0</div></div>
+            <div class="kpi"><div class="k">Monthly Burden</div><div class="v" id="kpi_monthly">$0</div></div>
+            <div class="kpi"><div class="k">Affordability</div><div class="v" id="kpi_afford">0%</div></div>
+            <div class="kpi"><div class="k">Break-Even</div><div class="v" id="kpi_break_even">N/A</div></div>
+          </div>
+        </section>
 
-    <div class="field">
-      <label for="policy_year">FY</label>
-      <select id="policy_year"></select>
-      <span class="hint">Fiscal year for tax/fee assumptions (auto-generated through 2099).</span>
-    </div>
-
-    <div class="field">
-      <label for="tax_rate">Sales Tax Rate (%)</label>
-      <input type="number" id="tax_rate" value="6.625" min="0" step="0.001" />
-      <span class="hint">Applied to taxable amount.</span>
-    </div>
-
-    <div class="field">
-      <label for="lfis_rate">LFIS Rate (%)</label>
-      <input type="number" id="lfis_rate" value="0.4" min="0" step="0.001" />
-      <span class="hint">Luxury surcharge rate.</span>
-    </div>
-
-    <div class="field">
-      <label for="lfis_threshold">LFIS Threshold ($)</label>
-      <input type="number" id="lfis_threshold" value="45000" min="0" step="1" />
-      <span class="hint">LFIS applies only above this amount.</span>
-    </div>
-
-    <div class="field">
-      <label for="dmv_plus_title">DMV + Title Fees ($)</label>
-      <input type="number" id="dmv_plus_title" value="144" min="0" step="1" />
-      <span class="hint">Bundled fixed government fees.</span>
-    </div>
-
-    <div class="field">
-      <label for="plate_fee">Plate Fee ($)</label>
-      <input type="number" id="plate_fee" value="5" min="0" step="1" />
-      <span class="hint">Registration plate fee.</span>
-    </div>
-
-    <div class="field">
-      <label for="vehicle_tier">Vehicle Tier</label>
-      <select id="vehicle_tier">
-        <option value="economy">Economy</option>
-        <option value="practical" selected>Practical</option>
-        <option value="comfort">Comfort</option>
-        <option value="sport">Sport</option>
-        <option value="luxury">Luxury</option>
-        <option value="exotic">Exotic</option>
-      </select>
-      <span class="hint">Luxury/sport level influences planning reserve and insurance estimate.</span>
-    </div>
-
-    <div class="field">
-      <label for="down_payment">Down Payment ($)</label>
-      <input type="number" id="down_payment" value="10000" min="0" step="100" />
-      <span class="hint">Cash applied to reduce financing.</span>
-    </div>
-
-    <div class="field">
-      <label for="apr_rate">APR (%)</label>
-      <input type="number" id="apr_rate" value="6.50" min="0" step="0.01" />
-      <span class="hint">Loan annual percentage rate.</span>
-    </div>
-
-    <div class="field">
-      <label for="loan_months">Loan Term (Months)</label>
-      <input type="number" id="loan_months" value="60" min="1" step="1" />
-      <span class="hint">Typical values: 48, 60, 72.</span>
-    </div>
-
-    <div class="field">
-      <label for="gross_income">Gross Monthly Income ($)</label>
-      <input type="number" id="gross_income" value="12000" min="0" step="100" />
-      <span class="hint">Used for affordability guidance.</span>
-    </div>
-
-    <div class="field">
-      <label for="years_owned">Years You Plan to Keep</label>
-      <input type="number" id="years_owned" value="5" min="1" step="1" />
-      <span class="hint">Ownership horizon for TCO.</span>
-    </div>
-
-    <div class="field">
-      <label for="annual_miles">Annual Miles</label>
-      <input type="number" id="annual_miles" value="12000" min="0" step="100" />
-      <span class="hint">Used for fuel cost estimate.</span>
-    </div>
-
-    <div class="field">
-      <label for="fuel_cost_per_gallon">Fuel Cost ($/gal)</label>
-      <input type="number" id="fuel_cost_per_gallon" value="3.5" min="0" step="0.01" />
-      <span class="hint">Average expected fuel price.</span>
-    </div>
-
-    <div class="field">
-      <label for="expected_resale">Expected Resale Value ($)</label>
-      <input type="number" id="expected_resale" value="35000" min="0" step="100" />
-      <span class="hint">Expected sale value at end of ownership horizon.</span>
-    </div>
-
-    <div class="field">
-      <label for="current_car_sell">Current Car Sell Value ($)</label>
-      <input type="number" id="current_car_sell" value="22000" min="0" step="100" />
-      <span class="hint">Current car value if you sell now.</span>
-    </div>
-        </form>
-      </section>
-
-      <section class="card">
-        <h2>Estimate</h2>
-        <p>Live output for purchase + financing + affordability.</p>
-        <div class="result" id="output"></div>
-      </section>
+        <section class="card">
+          <h2>Detailed TCO Output</h2>
+          <p>Transparent line-by-line computation for both paths.</p>
+          <div class="result" id="output"></div>
+        </section>
+      </div>
     </div>
 
     <footer class="footer">© 2026 Moshiko Nayman · Proprietary License · All rights reserved.</footer>
   </div>
 
   <script>
-    const DEFAULT_YEAR_POLICY_PRESETS = {
-      "2024": {
-        taxRate: 6.625,
-        lfisRate: 0.4,
-        lfisThreshold: 45000,
-        dmvPlusTitle: 144,
-        plate: 5,
-      },
-      "2025": {
-        taxRate: 6.625,
-        lfisRate: 0.4,
-        lfisThreshold: 45000,
-        dmvPlusTitle: 144,
-        plate: 5,
-      },
-      "2026": {
-        taxRate: 6.625,
-        lfisRate: 0.4,
-        lfisThreshold: 45000,
-        dmvPlusTitle: 144,
-        plate: 5,
-      },
-    };
+    function num(id) { return parseFloat(document.getElementById(id).value) || 0; }
+    function usd(n) { return '$' + Math.round(n).toLocaleString(); }
 
-    let yearPolicyPresets = { ...DEFAULT_YEAR_POLICY_PRESETS };
-
-    function format(num) {
-      return "$" + Math.round(num).toLocaleString();
-    }
-
-    function setValue(id, value) {
-      document.getElementById(id).value = value;
-    }
-
-    function monthlyLoanPayment(principal, annualPercent, months) {
+    function loanMonthly(principal, apr, months) {
       if (months <= 0) return 0;
-      const monthlyRate = (annualPercent / 100) / 12;
-      if (monthlyRate === 0) {
-        return principal / months;
-      }
-      return principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+      if (apr <= 0) return principal / months;
+      const r = (apr / 100) / 12;
+      return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
     }
 
-    function getSortedYears() {
-      return Object.keys(yearPolicyPresets).sort((a, b) => Number(b) - Number(a));
-    }
+    function calc() {
+      const buyPrice = num('buy_price');
+      const buyFees = num('buy_fees');
+      const sellCurrentNow = num('sell_current_now');
+      const downPayment = num('down_payment');
+      const apr = num('apr');
+      const loanMonths = num('loan_months');
+      const years = Math.max(1, num('years'));
+      const annualMiles = num('annual_miles');
+      const fuelPrice = num('fuel_price');
+      const newMpg = Math.max(1, num('new_mpg'));
+      const oldMpg = Math.max(1, num('old_mpg'));
+      const income = num('income');
+      const oldPayment = num('old_payment');
+      const oldInsurance = num('old_insurance');
+      const oldMaint = num('old_maint');
+      const oldResaleEnd = num('old_resale_end');
 
-    function ensureFutureYearCoverage() {
-      const numericYears = Object.keys(yearPolicyPresets)
-        .map((year) => Number(year))
-        .filter((year) => Number.isFinite(year));
+      const tier = document.getElementById('tier').value;
+      const tierCosts = {
+        economy: { insurance: 140, maint: 90 },
+        practical: { insurance: 180, maint: 120 },
+        comfort: { insurance: 240, maint: 170 },
+        sport: { insurance: 360, maint: 280 },
+        luxury: { insurance: 430, maint: 360 },
+        exotic: { insurance: 900, maint: 900 }
+      };
+      const tierProfile = tierCosts[tier] || tierCosts.practical;
 
-      if (!numericYears.length) {
-        yearPolicyPresets = {
-          [String(currentYear)]: {
-            taxRate: 6.625,
-            lfisRate: 0.4,
-            lfisThreshold: 45000,
-            dmvPlusTitle: 144,
-            plate: 5,
-          }
-        };
+      const months = years * 12;
+      const upfrontNetReplace = Math.max((buyPrice + buyFees) - sellCurrentNow - downPayment, 0);
+      const newLoanMonthly = loanMonthly(upfrontNetReplace, apr, loanMonths);
+
+      const newFuelMonthly = ((annualMiles / 12) / newMpg) * fuelPrice;
+      const oldFuelMonthly = ((annualMiles / 12) / oldMpg) * fuelPrice;
+
+      const newMonthly = newLoanMonthly + tierProfile.insurance + tierProfile.maint + newFuelMonthly;
+      const oldMonthly = oldPayment + oldInsurance + oldMaint + oldFuelMonthly;
+
+      const newResaleEnd = Math.max(buyPrice * 0.45, 0);
+      const tcoReplace = (newMonthly * months) + buyFees + Math.max(downPayment, 0) - newResaleEnd;
+      const tcoKeep = (oldMonthly * months) - oldResaleEnd;
+      const diff = tcoReplace - tcoKeep;
+
+      const monthlyBurden = newMonthly;
+      const affordability = income > 0 ? (monthlyBurden / income) * 100 : 0;
+
+      const upfrontDelta = Math.max((buyPrice + buyFees) - sellCurrentNow, 0);
+      const monthlySavingsVsKeep = oldMonthly - newMonthly;
+      const breakEvenMonths = monthlySavingsVsKeep > 0 ? Math.ceil(upfrontDelta / monthlySavingsVsKeep) : null;
+
+      document.getElementById('kpi_replace').textContent = usd(tcoReplace);
+      document.getElementById('kpi_keep').textContent = usd(tcoKeep);
+
+      const diffEl = document.getElementById('kpi_diff');
+      diffEl.textContent = (diff >= 0 ? '+' : '-') + usd(Math.abs(diff));
+      diffEl.className = 'v ' + (diff <= 0 ? 'good' : 'bad');
+
+      const monthlyEl = document.getElementById('kpi_monthly');
+      monthlyEl.textContent = usd(monthlyBurden) + '/mo';
+      monthlyEl.className = 'v ' + (affordability > 20 ? 'bad' : affordability > 15 ? 'warn' : 'good');
+
+      const affordEl = document.getElementById('kpi_afford');
+      affordEl.textContent = affordability.toFixed(1) + '%';
+      affordEl.className = 'v ' + (affordability > 20 ? 'bad' : affordability > 15 ? 'warn' : 'good');
+
+      const beEl = document.getElementById('kpi_break_even');
+      if (breakEvenMonths === null) {
+        beEl.textContent = 'No break-even';
+        beEl.className = 'v bad';
+      } else {
+        beEl.textContent = breakEvenMonths + ' mo';
+        beEl.className = 'v ' + (breakEvenMonths <= 36 ? 'good' : 'warn');
       }
 
-      const refreshedYears = Object.keys(yearPolicyPresets)
-        .map((year) => Number(year))
-        .filter((year) => Number.isFinite(year));
-      const latestYear = Math.max(...refreshedYears);
-      const latestPreset = yearPolicyPresets[String(latestYear)] || DEFAULT_YEAR_POLICY_PRESETS['2025'];
-      const targetMaxYear = 2099;
+      let out = '';
+      out += '==== CVP BUY/SELL TCO MODEL ====\n\n';
+      out += 'Horizon                    : ' + years.toFixed(0) + ' years (' + months.toFixed(0) + ' months)\n';
+      out += 'Segment                    : ' + tier.toUpperCase() + '\n';
+      out += 'Annual miles               : ' + annualMiles.toLocaleString() + '\n\n';
 
-      for (let year = latestYear + 1; year <= targetMaxYear; year += 1) {
-        yearPolicyPresets[String(year)] = { ...latestPreset };
-      }
+      out += '--- Replace Vehicle Path ---\n';
+      out += 'Purchase + fees            : ' + usd(buyPrice + buyFees) + '\n';
+      out += 'Sell current now           : -' + usd(sellCurrentNow) + '\n';
+      out += 'Down payment               : -' + usd(downPayment) + '\n';
+      out += 'Financed principal         : ' + usd(upfrontNetReplace) + '\n';
+      out += 'Loan payment               : ' + usd(newLoanMonthly) + '/mo\n';
+      out += 'Insurance estimate         : ' + usd(tierProfile.insurance) + '/mo\n';
+      out += 'Maintenance estimate       : ' + usd(tierProfile.maint) + '/mo\n';
+      out += 'Fuel estimate              : ' + usd(newFuelMonthly) + '/mo\n';
+      out += 'Expected resale at horizon : -' + usd(newResaleEnd) + '\n';
+      out += 'TCO Replace                : ' + usd(tcoReplace) + '\n\n';
+
+      out += '--- Keep Current Vehicle Path ---\n';
+      out += 'Current loan payment       : ' + usd(oldPayment) + '/mo\n';
+      out += 'Current insurance          : ' + usd(oldInsurance) + '/mo\n';
+      out += 'Current maintenance        : ' + usd(oldMaint) + '/mo\n';
+      out += 'Current fuel               : ' + usd(oldFuelMonthly) + '/mo\n';
+      out += 'Current resale at horizon  : -' + usd(oldResaleEnd) + '\n';
+      out += 'TCO Keep                   : ' + usd(tcoKeep) + '\n\n';
+
+      out += '--- Decision ---\n';
+      if (diff <= 0) out += 'Replace is cheaper by       : ' + usd(Math.abs(diff)) + ' over ' + years.toFixed(0) + ' years\n';
+      else out += 'Keep is cheaper by          : ' + usd(diff) + ' over ' + years.toFixed(0) + ' years\n';
+      out += 'Monthly burden (replace)    : ' + usd(monthlyBurden) + '/mo\n';
+      out += 'Affordability ratio         : ' + affordability.toFixed(1) + '% of gross income\n';
+      out += 'Break-even from monthly gap : ' + (breakEvenMonths === null ? 'Not reached' : (breakEvenMonths + ' months')) + '\n';
+
+      document.getElementById('output').textContent = out;
     }
 
-    function populateYearOptions(preferredYear) {
-      const select = document.getElementById('policy_year');
-      const years = getSortedYears();
-      select.innerHTML = '';
-      years.forEach((year) => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        select.appendChild(option);
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('input, select').forEach((el) => {
+        el.addEventListener('input', calc);
+        el.addEventListener('change', calc);
       });
-
-      const targetYear = preferredYear && years.includes(preferredYear)
-        ? preferredYear
-        : (years.includes('2025') ? '2025' : years[years.length - 1]);
-
-      if (targetYear) {
-        select.value = targetYear;
-      }
-    }
-
-    async function loadYearPolicyPresets() {
-      try {
-        const response = await fetch('__COREPORTAL_OTD_POLICY_PATH__', { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error('policy file unavailable');
-        }
-
-        const payload = await response.json();
-        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-          throw new Error('policy file format is invalid');
-        }
-
-        yearPolicyPresets = payload;
-        ensureFutureYearCoverage();
-      } catch (error) {
-        yearPolicyPresets = { ...DEFAULT_YEAR_POLICY_PRESETS };
-        ensureFutureYearCoverage();
-      }
-    }
-
-    function applyYearPolicy(year) {
-      const preset = yearPolicyPresets[year];
-      if (!preset) {
-        return;
-      }
-      document.getElementById('policyYearBadge').textContent = year;
-      setValue('tax_rate', preset.taxRate);
-      setValue('lfis_rate', preset.lfisRate);
-      setValue('lfis_threshold', preset.lfisThreshold);
-      setValue('dmv_plus_title', preset.dmvPlusTitle);
-      setValue('plate_fee', preset.plate);
-    }
-
-    function calculate() {
-      try {
-        const msrp = parseFloat(document.getElementById('msrp').value) || 0;
-        const discountPercent = parseFloat(document.getElementById('discount').value) || 0;
-        const tradein = parseFloat(document.getElementById('tradein').value) || 0;
-        const rebate = parseFloat(document.getElementById('rebate').value) || 0;
-        const docfee = parseFloat(document.getElementById('docfee').value) || 0;
-        const otherfees = parseFloat(document.getElementById('otherfees').value) || 0;
-        const policyYear = document.getElementById('policy_year').value;
-        const taxRatePct = parseFloat(document.getElementById('tax_rate').value) || 0;
-        const lfisRatePct = parseFloat(document.getElementById('lfis_rate').value) || 0;
-        const lfisThreshold = parseFloat(document.getElementById('lfis_threshold').value) || 0;
-        const dmvPlusTitle = parseFloat(document.getElementById('dmv_plus_title').value) || 0;
-        const plate = parseFloat(document.getElementById('plate_fee').value) || 0;
-        const vehicleTier = document.getElementById('vehicle_tier').value;
-        const downPayment = parseFloat(document.getElementById('down_payment').value) || 0;
-        const aprRate = parseFloat(document.getElementById('apr_rate').value) || 0;
-        const loanMonths = parseFloat(document.getElementById('loan_months').value) || 0;
-        const grossIncome = parseFloat(document.getElementById('gross_income').value) || 0;
-        const yearsOwned = parseFloat(document.getElementById('years_owned').value) || 0;
-        const annualMiles = parseFloat(document.getElementById('annual_miles').value) || 0;
-        const fuelCostPerGallon = parseFloat(document.getElementById('fuel_cost_per_gallon').value) || 0;
-        const expectedResale = parseFloat(document.getElementById('expected_resale').value) || 0;
-        const currentCarSell = parseFloat(document.getElementById('current_car_sell').value) || 0;
-        const taxRate = taxRatePct / 100;
-        const lfisRate = lfisRatePct / 100;
-
-        const discountAmount = msrp * (discountPercent / 100);
-        const msrpAfterDiscount = msrp - discountAmount;
-
-        const taxable = Math.max(msrpAfterDiscount - tradein, 0);
-        const tax = taxable * taxRate;
-        const lfis = msrpAfterDiscount > lfisThreshold ? msrpAfterDiscount * lfisRate : 0;
-        const taxSavings = tradein * taxRate;
-
-        const totalWithoutDiscount = Math.max(msrp - tradein, 0) + tax + docfee + otherfees + dmvPlusTitle + plate + (msrp > lfisThreshold ? msrp * lfisRate : 0) - rebate;
-        const totalAfterDiscount = taxable + tax + docfee + otherfees + dmvPlusTitle + plate + lfis - rebate;
-
-        const tierSettings = {
-          economy: { reserve: 75, insurance: 130 },
-          practical: { reserve: 125, insurance: 170 },
-          comfort: { reserve: 175, insurance: 220 },
-          sport: { reserve: 320, insurance: 350 },
-          luxury: { reserve: 420, insurance: 430 },
-          exotic: { reserve: 800, insurance: 950 },
-        };
-
-        const selectedTier = tierSettings[vehicleTier] || tierSettings.practical;
-        const financedPrincipal = Math.max(totalAfterDiscount - downPayment, 0);
-        const monthlyLoan = monthlyLoanPayment(financedPrincipal, aprRate, loanMonths);
-        const monthlyFuel = ((annualMiles / 12) / 26) * fuelCostPerGallon;
-        const monthlyTotalOwnership = monthlyLoan + selectedTier.insurance + selectedTier.reserve + monthlyFuel;
-        const affordabilityPercent = grossIncome > 0 ? (monthlyTotalOwnership / grossIncome) * 100 : 0;
-        const affordabilityNote = affordabilityPercent > 20
-          ? "Over 20% of income (high pressure)"
-          : affordabilityPercent > 15
-            ? "Between 15%-20% (caution zone)"
-            : "Below 15% (healthier range)";
-
-          const buyNowNet = Math.max(totalAfterDiscount - currentCarSell, 0);
-          const holdingMonths = Math.max(yearsOwned * 12, 1);
-          const ownershipCashflow = monthlyTotalOwnership * holdingMonths;
-          const totalCostOfOwnership = buyNowNet + ownershipCashflow - expectedResale;
-          const monthlyTco = totalCostOfOwnership / holdingMonths;
-
-        let output = "";
-        output += "==== CVP COST BREAKDOWN ====\n\n";
-        output += "🗓️ FY                 : " + policyYear + "\n";
-        output += "🚗 Vehicle Tier       : " + vehicleTier.toUpperCase() + "\n";
-        output += "💲 MSRP                : " + format(msrp) + "\n";
-        output += "🎯 Discount Selected   : " + discountPercent.toFixed(2) + "% (-" + format(discountAmount) + ")\n";
-        output += "📉 Trade-in            : " + format(tradein) + "\n";
-        output += "📈 Price after trade-in: " + format(taxable) + "\n";
-        output += "📈 Sales tax (" + taxRatePct.toFixed(3) + "%)  : " + format(tax) + "\n";
-        output += "📈 Destination/Doc fee : " + format(docfee) + "\n";
-        output += "📈 DMV + title fees    : " + format(dmvPlusTitle) + "\n";
-        output += "📈 Other dealer fees   : " + format(otherfees) + "\n";
-        output += "📈 Plate fee           : " + format(plate) + "\n";
-        output += "📈 LFIS surcharge (" + lfisRatePct.toFixed(3) + "% above " + format(lfisThreshold) + ") : " + format(lfis) + "\n";
-        output += "📉 Manufacturer rebate : -" + format(rebate) + "\n";
-        output += "📉 Trade-In Tax        : -" + format(taxSavings) + "\n\n";
-        output += "==== FINANCING + OWNERSHIP ====\n\n";
-        output += "🏦 Down payment        : " + format(downPayment) + "\n";
-        output += "🏦 Financed principal  : " + format(financedPrincipal) + "\n";
-        output += "🏦 Loan APR            : " + aprRate.toFixed(2) + "%\n";
-        output += "🏦 Loan term           : " + loanMonths.toFixed(0) + " months\n";
-        output += "🏦 Loan payment est.   : " + format(monthlyLoan) + " / month\n";
-        output += "🛡️ Insurance est.      : " + format(selectedTier.insurance) + " / month\n";
-        output += "🧰 Tier reserve est.   : " + format(selectedTier.reserve) + " / month\n";
-        output += "⛽ Fuel est.           : " + format(monthlyFuel) + " / month\n";
-        output += "📊 Ownership est.      : " + format(monthlyTotalOwnership) + " / month\n";
-        output += "💼 Income provided     : " + format(grossIncome) + " / month\n";
-        output += "💼 Affordability       : " + affordabilityPercent.toFixed(2) + "% · " + affordabilityNote + "\n\n";
-        output += "==== BUY/SELL TCO VIEW ====\n\n";
-        output += "🧾 Buy-now net (after current sale): " + format(buyNowNet) + "\n";
-        output += "🕒 Ownership horizon             : " + yearsOwned.toFixed(0) + " years\n";
-        output += "🔁 Expected resale at exit       : " + format(expectedResale) + "\n";
-        output += "📦 Total Cost of Ownership (TCO) : " + format(totalCostOfOwnership) + "\n";
-        output += "📦 Monthly TCO equivalent        : " + format(monthlyTco) + " / month\n\n";
-        output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(without discount)</span>:&nbsp;<strong class='total-value'>" + format(totalWithoutDiscount) + "</strong></span><br>";
-        output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(after " + discountPercent.toFixed(2) + "%&nbsp;discount)</span>:&nbsp;<span class='positive total-value'>" + format(totalAfterDiscount) + "</span></span><br>";
-
-        document.getElementById('output').innerHTML = output;
-      } catch (e) {
-        document.getElementById('output').innerHTML = 'Error: ' + e.message;
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      const watchedFields = [
-        'msrp', 'discount', 'tradein', 'rebate', 'docfee', 'otherfees',
-        'tax_rate', 'lfis_rate', 'lfis_threshold', 'dmv_plus_title', 'plate_fee',
-        'vehicle_tier', 'down_payment', 'apr_rate', 'loan_months', 'gross_income',
-        'years_owned', 'annual_miles', 'fuel_cost_per_gallon', 'expected_resale', 'current_car_sell'
-      ];
-
-      await loadYearPolicyPresets();
-      populateYearOptions(String(new Date().getFullYear()));
-
-      watchedFields.forEach(id => {
-        document.getElementById(id).addEventListener('input', calculate);
-      });
-
-      document.getElementById('policy_year').addEventListener('change', (event) => {
-        applyYearPolicy(event.target.value);
-        calculate();
-      });
-
-      applyYearPolicy(document.getElementById('policy_year').value);
-      calculate();
+      calc();
     });
   </script>
 </body>

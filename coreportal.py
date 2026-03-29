@@ -241,7 +241,7 @@ APP_REGISTRY: list[dict[str, Any]] = [
     },
     {
         "id": "cvp",
-        "name": "CVP · Car Value Planner",
+        "name": "CVP · Buy/Sell TCO Planner",
         "description": "Vehicle buy/replace planner with out-the-door math and ownership guidance.",
         "type": "static_html",
         "open_path": CVP_PATH,
