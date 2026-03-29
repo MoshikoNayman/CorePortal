@@ -13,4 +13,4 @@ Files:
 - `policy_years.json` - tax/fee policy presets
 
 Compatibility:
-- Legacy `/OTD` routes are redirected to `/CVP`
+- OTD remains available separately at `/OTD`

@@ -15,13 +15,13 @@ Simple deploy folder for the personal finance and portfolio web app.
 - `/VPM` - Virtual Portfolio Manager
 - `/BAT` - bank ledger + owner overview + net worth view
 - `/NWD` - compatibility alias to `/BAT`
-- `/CVP` - Car Value Planner (buy/replace planner)
-- `/OTD` - legacy alias that redirects to `/CVP`
+- `/OTD` - Out-the-Door Estimator (original tool)
+- `/CVP` - Car Value Planner (new buy/sell + TCO planner)
 
 ## CVP acronym
 
 - `CVP` = `Car Value Planner`
-- Includes out-the-door pricing, financing, and lifestyle tier guidance (economy to exotic)
+- CVP is separate from OTD and focuses on buy/sell planning with TCO estimates
 
 ## Quick run
 
