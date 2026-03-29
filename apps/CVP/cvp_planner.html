@@ -422,7 +422,10 @@
         <section class="card">
           <div class="title-row">
             <h2>1) Baseline Car (Keep Scenario)</h2>
-            <button class="btn primary" id="loadAcadiaBtn" type="button">Load My Acadia Baseline</button>
+            <div>
+              <button class="btn" id="importFleetCsvBtn" type="button">Import Baseline + Cars CSV</button>
+              <button class="btn primary" id="loadSampleBaselineBtn" type="button">Load Sample Baseline</button>
+            </div>
           </div>
           <p class="desc">Hybrid approach: use dropdowns for common drivetrain/transmission patterns, plus free text for details you care about.</p>
           <div class="mode-key">
@@ -456,6 +459,8 @@
             <div class="field auto"><label for="base_yearly_fuel_auto">Auto Fuel Cost ($/year)</label><input id="base_yearly_fuel_auto" class="readonly-input" type="text" value="$0" readonly /></div>
             <div class="field auto"><label for="base_value_7y_auto">Projected Baseline Value @ 7y</label><input id="base_value_7y_auto" class="readonly-input" type="text" value="$0" readonly /></div>
           </div>
+          <div class="mini-note">CSV import supports one spreadsheet with mixed rows: set <strong>section</strong> to <strong>baseline</strong> or <strong>candidate</strong>. Candidate rows fill slots A-D in order.</div>
+          <input id="fleetCsvInput" type="file" accept=".csv,text/csv" style="display:none;" />
         </section>
 
         <section class="card">
@@ -534,6 +539,54 @@
     function fmtUsd(n) {
       const rounded = Math.round(n || 0);
       return '$' + rounded.toLocaleString();
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cur = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i += 1) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (inQuotes) {
+          if (ch === '"' && next === '"') {
+            cur += '"';
+            i += 1;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            cur += ch;
+          }
+          continue;
+        }
+        if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ',') {
+          row.push(cur.trim());
+          cur = '';
+        } else if (ch === '\n') {
+          row.push(cur.trim());
+          rows.push(row);
+          row = [];
+          cur = '';
+        } else if (ch !== '\r') {
+          cur += ch;
+        }
+      }
+
+      if (cur.length || row.length) {
+        row.push(cur.trim());
+        rows.push(row);
+      }
+
+      return rows.filter((r) => r.some((c) => c !== ''));
+    }
+
+    function csvBool(v) {
+      const x = String(v || '').toLowerCase();
+      return x === '1' || x === 'true' || x === 'yes' || x === 'y';
     }
 
     function num(id) {
@@ -873,7 +926,7 @@
       document.getElementById('output').textContent = lines.join('\n');
     }
 
-    function loadAcadiaBaseline() {
+    function loadSampleBaseline() {
       document.getElementById('base_year').value = '2019';
       document.getElementById('base_make').value = 'GMC';
       document.getElementById('base_model').value = 'Acadia';
@@ -885,6 +938,87 @@
       document.getElementById('base_mileage').value = '75472';
       document.getElementById('base_value_now').value = '13500';
       calc();
+    }
+
+    function importFleetCsv(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rows = parseCsv(reader.result || '');
+        if (!rows.length) return;
+
+        const header = rows[0].map((h) => (h || '').trim());
+        const idx = {};
+        header.forEach((h, i) => { idx[h.toLowerCase()] = i; });
+
+        const hasHeader = idx.section !== undefined;
+        const start = hasHeader ? 1 : 0;
+        const importedCandidates = [];
+
+        for (let r = start; r < rows.length; r += 1) {
+          const row = rows[r];
+          if (!row.length) continue;
+          const section = String(row[idx.section] || '').toLowerCase();
+
+          if (section === 'baseline') {
+            const set = (key, id) => {
+              if (idx[key] === undefined) return;
+              const v = row[idx[key]];
+              if (v === undefined || v === '') return;
+              const el = document.getElementById(id);
+              if (el) el.value = v;
+            };
+
+            set('year', 'base_year');
+            set('make', 'base_make');
+            set('model', 'base_model');
+            set('trim', 'base_trim');
+            set('engine', 'base_engine');
+            set('mileage', 'base_mileage');
+            set('drivetrain', 'base_drivetrain');
+            set('transmission', 'base_transmission');
+            set('transmission_code', 'base_transmission_code');
+            set('value_now', 'base_value_now');
+            set('annual_miles', 'annual_miles');
+            set('fuel_price', 'fuel_price');
+            set('mpg', 'base_mpg');
+            set('payment', 'base_payment');
+            set('insurance', 'base_insurance');
+            set('maintenance', 'base_maintenance');
+            set('repairs', 'base_repairs');
+            set('repair_risk', 'base_repair_risk');
+            set('depreciation', 'base_depreciation');
+            set('income', 'income');
+          }
+
+          if (section === 'candidate' && importedCandidates.length < 4) {
+            importedCandidates.push({
+              enabled: idx.enabled !== undefined ? csvBool(row[idx.enabled]) : true,
+              name: idx.name !== undefined ? (row[idx.name] || `Candidate ${importedCandidates.length + 1}`) : `Candidate ${importedCandidates.length + 1}`,
+              type: idx.type !== undefined && String(row[idx.type] || '').toLowerCase() === 'new' ? 'new' : 'used',
+              price: idx.price !== undefined ? parseFloat(row[idx.price]) || 0 : 0,
+              fees: idx.fees !== undefined ? parseFloat(row[idx.fees]) || 0 : 0,
+              apr: idx.apr !== undefined ? parseFloat(row[idx.apr]) || 0 : 0,
+              term: idx.term !== undefined ? parseFloat(row[idx.term]) || 60 : 60,
+              mpg: idx.mpg !== undefined ? parseFloat(row[idx.mpg]) || 20 : 20,
+              insurance: idx.insurance !== undefined ? parseFloat(row[idx.insurance]) || 0 : 0,
+              maintenance: idx.maintenance !== undefined ? parseFloat(row[idx.maintenance]) || 0 : 0,
+              resalePct7: idx.resalepct7 !== undefined ? parseFloat(row[idx.resalepct7]) || 40 : 40,
+              upfront: idx.upfront !== undefined ? parseFloat(row[idx.upfront]) || 0 : 0
+            });
+          }
+        }
+
+        if (importedCandidates.length) {
+          for (let i = 0; i < 4; i += 1) {
+            candidateDefaults[i] = importedCandidates[i] || { enabled: false, name: `Candidate ${String.fromCharCode(65 + i)}`, type: 'used', price: 0, fees: 0, apr: 0, term: 60, mpg: 20, insurance: 0, maintenance: 0, resalePct7: 40, upfront: 0 };
+          }
+          renderCandidates();
+          bindInputs();
+        }
+
+        calc();
+      };
+      reader.readAsText(file);
     }
 
     function loadExamples() {
@@ -909,7 +1043,13 @@
     window.addEventListener('DOMContentLoaded', () => {
       renderCandidates();
       bindInputs();
-      document.getElementById('loadAcadiaBtn').addEventListener('click', loadAcadiaBaseline);
+      document.getElementById('loadSampleBaselineBtn').addEventListener('click', loadSampleBaseline);
+      document.getElementById('importFleetCsvBtn').addEventListener('click', () => document.getElementById('fleetCsvInput').click());
+      document.getElementById('fleetCsvInput').addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) importFleetCsv(f);
+        e.target.value = '';
+      });
       document.getElementById('loadExampleBtn').addEventListener('click', loadExamples);
       calc();
     });
