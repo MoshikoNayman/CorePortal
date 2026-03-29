@@ -509,6 +509,9 @@
             <div class="tile"><div class="k">5-Year Spread</div><div class="v" id="spread5">$0</div></div>
             <div class="tile"><div class="k">Best Option Burden</div><div class="v" id="bestBurden">0%</div></div>
           </div>
+          <div class="title-actions" style="margin-top: 2px; margin-bottom: 10px;">
+            <button class="btn primary" id="exportReportBtn" type="button">Export Full Report CSV</button>
+          </div>
           <div class="result" id="output"></div>
         </section>
       </div>
@@ -518,8 +521,9 @@
       <div class="title-row controls-left">
         <h2>2) Cars To Compare (Add New/Used)</h2>
         <div class="title-actions">
-          <button class="btn" id="loadExampleBtn" type="button">Load Example Candidates</button>
-          <button class="btn primary" id="exportReportBtn" type="button">Export Full Report CSV</button>
+          <button class="btn" id="loadMixedExamplesBtn" type="button">Load Mixed Examples</button>
+          <button class="btn" id="loadNewExamplesBtn" type="button">Load 2026 New Examples</button>
+          <button class="btn" id="clearExamplesBtn" type="button">Clear Candidate Rows</button>
         </div>
       </div>
       <p class="desc">Full-width editor for comparison rows. Turn on "Use" for each candidate you want in the graph and report.</p>
@@ -1124,14 +1128,35 @@
       reader.readAsText(file);
     }
 
-    function loadExamples() {
-      candidateDefaults[0] = { enabled: true, name: '2022 Honda Pilot EX-L (Used)', type: 'used', price: 31500, fees: 2200, apr: 6.4, term: 60, mpg: 23, insurance: 210, maintenance: 145, resalePct7: 50, upfront: 0 };
-      candidateDefaults[1] = { enabled: true, name: '2024 Toyota Highlander LE (New)', type: 'new', price: 42600, fees: 3500, apr: 5.2, term: 72, mpg: 25, insurance: 235, maintenance: 125, resalePct7: 51, upfront: 0 };
-      candidateDefaults[2] = { enabled: true, name: '2021 Mazda CX-9 Touring (Used)', type: 'used', price: 29200, fees: 2100, apr: 6.8, term: 60, mpg: 22, insurance: 205, maintenance: 158, resalePct7: 46, upfront: 0 };
-      candidateDefaults[3] = { enabled: false, name: '2025 Acura MDX Tech (New)', type: 'new', price: 54600, fees: 4500, apr: 5.7, term: 72, mpg: 21, insurance: 300, maintenance: 215, resalePct7: 44, upfront: 0 };
+    function setCandidates(rows) {
+      for (let i = 0; i < 4; i += 1) {
+        candidateDefaults[i] = rows[i] || { enabled: false, name: `Candidate ${String.fromCharCode(65 + i)}`, type: 'used', price: 0, fees: 0, apr: 0, term: 60, mpg: 20, insurance: 0, maintenance: 0, resalePct7: 40, upfront: 0 };
+      }
       renderCandidates();
       bindInputs();
       calc();
+    }
+
+    function loadMixedExamples() {
+      setCandidates([
+        { enabled: true, name: '2022 Honda Pilot EX-L (Used)', type: 'used', price: 31500, fees: 2200, apr: 6.4, term: 60, mpg: 23, insurance: 210, maintenance: 145, resalePct7: 50, upfront: 0 },
+        { enabled: true, name: '2026 Toyota Highlander XLE (New)', type: 'new', price: 47500, fees: 3500, apr: 5.2, term: 72, mpg: 24, insurance: 235, maintenance: 125, resalePct7: 51, upfront: 0 },
+        { enabled: true, name: '2026 Mazda CX-90 Preferred Plus (New)', type: 'new', price: 48500, fees: 3400, apr: 5.9, term: 72, mpg: 25, insurance: 245, maintenance: 150, resalePct7: 49, upfront: 0 },
+        { enabled: true, name: '2026 Ford Explorer ST-Line (New)', type: 'new', price: 49800, fees: 3400, apr: 5.9, term: 72, mpg: 23, insurance: 250, maintenance: 160, resalePct7: 49, upfront: 0 }
+      ]);
+    }
+
+    function loadNewExamples() {
+      setCandidates([
+        { enabled: true, name: '2026 Kia Telluride EX X-Line (New)', type: 'new', price: 44500, fees: 3200, apr: 5.9, term: 72, mpg: 22, insurance: 240, maintenance: 145, resalePct7: 50, upfront: 0 },
+        { enabled: true, name: '2026 Nissan Pathfinder SL (New)', type: 'new', price: 44500, fees: 3000, apr: 5.9, term: 72, mpg: 23, insurance: 230, maintenance: 140, resalePct7: 49, upfront: 0 },
+        { enabled: true, name: '2026 Toyota Grand Highlander XLE (New)', type: 'new', price: 50500, fees: 3500, apr: 5.9, term: 72, mpg: 24, insurance: 245, maintenance: 145, resalePct7: 50, upfront: 0 },
+        { enabled: true, name: '2026 GMC Acadia Elevation (New)', type: 'new', price: 52000, fees: 3600, apr: 5.9, term: 72, mpg: 23, insurance: 250, maintenance: 155, resalePct7: 48, upfront: 0 }
+      ]);
+    }
+
+    function clearCandidates() {
+      setCandidates([]);
     }
 
     function bindInputs() {
@@ -1155,7 +1180,9 @@
         if (f) importFleetCsv(f);
         e.target.value = '';
       });
-      document.getElementById('loadExampleBtn').addEventListener('click', loadExamples);
+      document.getElementById('loadMixedExamplesBtn').addEventListener('click', loadMixedExamples);
+      document.getElementById('loadNewExamplesBtn').addEventListener('click', loadNewExamples);
+      document.getElementById('clearExamplesBtn').addEventListener('click', clearCandidates);
       calc();
     });
   </script>
