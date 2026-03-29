@@ -85,6 +85,10 @@
       align-items: start;
     }
 
+    .compare-card-full {
+      margin-top: 16px;
+    }
+
     .stack { display: grid; gap: 16px; }
 
     .card {
@@ -267,7 +271,7 @@
     }
 
     .table-wrap {
-      max-height: 295px;
+      max-height: 440px;
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -464,38 +468,6 @@
           <input id="fleetCsvInput" type="file" accept=".csv,text/csv" style="display:none;" />
         </section>
 
-        <section class="card">
-          <div class="title-row">
-            <h2>2) Cars To Compare (Add New/Used)</h2>
-            <button class="btn" id="loadExampleBtn" type="button">Load Example Candidates</button>
-          </div>
-          <p class="desc">Turn on "Use" for each candidate you want in the graph. Enter your own values for purchase, operating cost, and expected value.</p>
-
-          <div class="table-wrap">
-            <table class="compare-table" id="compareTable">
-              <thead>
-                <tr>
-                  <th>Use</th>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Price</th>
-                  <th>Fees</th>
-                  <th>APR %</th>
-                  <th>Term</th>
-                  <th>MPG</th>
-                  <th>Ins/mo</th>
-                  <th>Maint/mo</th>
-                  <th>Resale % @ 7y</th>
-                  <th>One-time Upgrade</th>
-                </tr>
-              </thead>
-              <tbody id="candidateBody"></tbody>
-            </table>
-          </div>
-          <div class="mini-note">
-            TCO includes fuel, finance, insurance, maintenance, one-time upfront costs, minus projected resale at each horizon.
-          </div>
-        </section>
       </div>
 
       <div class="stack">
@@ -524,6 +496,42 @@
         </section>
       </div>
     </div>
+
+    <section class="card compare-card-full">
+      <div class="title-row">
+        <h2>2) Cars To Compare (Add New/Used)</h2>
+        <div>
+          <button class="btn" id="loadExampleBtn" type="button">Load Example Candidates</button>
+          <button class="btn primary" id="exportReportBtn" type="button">Export Full Report CSV</button>
+        </div>
+      </div>
+      <p class="desc">Full-width editor for comparison rows. Turn on "Use" for each candidate you want in the graph and report.</p>
+
+      <div class="table-wrap">
+        <table class="compare-table" id="compareTable">
+          <thead>
+            <tr>
+              <th>Use</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Price</th>
+              <th>Fees</th>
+              <th>APR %</th>
+              <th>Term</th>
+              <th>MPG</th>
+              <th>Ins/mo</th>
+              <th>Maint/mo</th>
+              <th>Resale % @ 7y</th>
+              <th>One-time Upgrade</th>
+            </tr>
+          </thead>
+          <tbody id="candidateBody"></tbody>
+        </table>
+      </div>
+      <div class="mini-note">
+        TCO includes fuel, finance, insurance, maintenance, one-time upfront costs, minus projected resale at each horizon.
+      </div>
+    </section>
 
     <footer class="footer">© 2026 Moshiko Nayman · Proprietary License · All rights reserved.</footer>
   </div>
@@ -635,6 +643,34 @@
         ['reference','','Tesla Model X (3-row capable)','','','Tesla','Model X','3-row','','','','','','','','','','','','','','','','','','','','','','','','79990','89000','99990','EV','EV','Reference row only']
       ];
       downloadCsv('cvp_import_template.csv', rows);
+    }
+
+    function exportFullReportCsv() {
+      const state = window.__cvpLastState;
+      if (!state) return;
+
+      const rows = [];
+      rows.push(['section', 'key', 'value']);
+      rows.push(['baseline', 'name', state.baselineName]);
+      rows.push(['baseline', 'value_now', Math.round(state.ctx.baseValueNow)]);
+      rows.push(['baseline', 'annual_miles', Math.round(state.ctx.annualMiles)]);
+      rows.push(['baseline', 'fuel_price', state.ctx.fuelPrice]);
+      rows.push(['baseline', 'mpg', state.ctx.baseMpg]);
+      rows.push(['baseline', 'insurance_mo', state.ctx.baseInsurance]);
+      rows.push(['baseline', 'maintenance_mo', state.ctx.baseMaintenance]);
+      rows.push(['baseline', 'repairs_mo', state.ctx.baseRepairs]);
+      rows.push(['baseline', 'repair_risk_pct', state.ctx.baseRepairRisk]);
+      rows.push(['baseline', 'depreciation_pct', state.ctx.baseDepreciation]);
+      rows.push([]);
+      rows.push(['scenario', 'name', 'year', 'tco', 'monthly_burden']);
+      state.scenarios.forEach((s) => {
+        HORIZONS.forEach((y) => {
+          rows.push(['scenario', s.name, y, Math.round(s.horizonTco[y]), Math.round(s.monthlyByYear[y])]);
+        });
+      });
+
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      downloadCsv(`cvp_full_report_${stamp}.csv`, rows);
     }
 
     function num(id) {
@@ -972,6 +1008,7 @@
       lines.push('- Lower TCO line over time means better long-term financial outcome.');
 
       document.getElementById('output').textContent = lines.join('\n');
+      window.__cvpLastState = { ctx, baselineName, scenarios };
     }
 
     function loadSampleBaseline() {
@@ -1094,6 +1131,7 @@
       document.getElementById('loadSampleBaselineBtn').addEventListener('click', loadSampleBaseline);
       document.getElementById('importFleetCsvBtn').addEventListener('click', () => document.getElementById('fleetCsvInput').click());
       document.getElementById('downloadTemplateBtn').addEventListener('click', downloadFleetTemplateCsv);
+      document.getElementById('exportReportBtn').addEventListener('click', exportFullReportCsv);
       document.getElementById('fleetCsvInput').addEventListener('change', (e) => {
         const f = e.target.files && e.target.files[0];
         if (f) importFleetCsv(f);
