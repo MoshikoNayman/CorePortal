@@ -13,12 +13,12 @@
       --ink: #132748;
       --muted: #5f7292;
       --line: #d2dceb;
-      --calc-bg: #eaf6ff;
-      --calc-line: #9fc8ef;
-      --view-bg: #f6f8fc;
-      --view-line: #c9d3e4;
-      --auto-bg: #eefbf2;
-      --auto-line: #9ad0aa;
+      --calc-bg: #d9efff;
+      --calc-line: #4b97d9;
+      --view-bg: #edf1f7;
+      --view-line: #8ea0bc;
+      --auto-bg: #dff6e6;
+      --auto-line: #4f9b67;
       --brand: #1158d5;
       --brand-strong: #0b3f9f;
       --shadow: 0 12px 30px rgba(14, 36, 86, 0.09);
@@ -166,16 +166,19 @@
     .field.calc {
       background: var(--calc-bg);
       border-color: var(--calc-line);
+      box-shadow: inset 0 0 0 1px rgba(75, 151, 217, 0.08);
     }
 
     .field.view {
       background: var(--view-bg);
       border-color: var(--view-line);
+      box-shadow: inset 0 0 0 1px rgba(142, 160, 188, 0.08);
     }
 
     .field.auto {
       background: var(--auto-bg);
       border-color: var(--auto-line);
+      box-shadow: inset 0 0 0 1px rgba(79, 155, 103, 0.08);
     }
 
     .readonly-input {
@@ -309,11 +312,11 @@
       gap: 6px;
       padding: 5px 9px;
       border-radius: 999px;
-      border: 1px solid var(--line);
+      border: 1px solid #c6d2e4;
       font-size: 11px;
       font-weight: 700;
-      color: var(--muted);
-      background: #fff;
+      color: #42536f;
+      background: #f9fbfe;
     }
 
     .swatch {
@@ -321,6 +324,7 @@
       height: 10px;
       border-radius: 999px;
       border: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
     }
 
     .years-grid {
