@@ -13,8 +13,15 @@ Simple deploy folder for the personal finance and portfolio web app.
 
 - `/` - Home
 - `/VPM` - Virtual Portfolio Manager
-- `/BAT` - bank ledger + owner overview
-- `/OTD` - out-the-door estimator (if file exists)
+- `/BAT` - bank ledger + owner overview + net worth view
+- `/NWD` - compatibility alias to `/BAT`
+- `/CVP` - Car Value Planner (buy/replace planner)
+- `/OTD` - legacy alias that redirects to `/CVP`
+
+## CVP acronym
+
+- `CVP` = `Car Value Planner`
+- Includes out-the-door pricing, financing, and lifestyle tier guidance (economy to exotic)
 
 ## Quick run
 
@@ -110,6 +117,13 @@ http://<server-ip>/coreportal
 - BAT is DB-first (SQLite is source of truth)
 - CSV should be import/export only, not live sync
 - VPM stays separate by design
+- Keep `.venv` for reliability and dependency isolation on the server
+- To reduce folder bloat/noise in preprod, run:
+
+```bash
+./scripts/venv_maintenance.sh --status
+./scripts/venv_maintenance.sh --prune
+```
 
 ## License
 

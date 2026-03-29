@@ -28,12 +28,16 @@ VPM_DIR_CANDIDATES = [
     APP_ROOT / "VPM",
     APP_ROOT / "apps" / "VPM",
 ]
-OTD_HTML_CANDIDATES = [
+CVP_HTML_CANDIDATES = [
+    APP_ROOT / "apps" / "CVP" / "cvp_planner.html",
+    APP_ROOT / "CVP" / "cvp_planner.html",
     APP_ROOT / "apps" / "OTD" / "otd_estimator.html",
     APP_ROOT / "OTD" / "otd_estimator.html",
     APP_ROOT / "tools" / "OTD" / "otd_estimator.html",
 ]
-OTD_POLICY_CANDIDATES = [
+CVP_POLICY_CANDIDATES = [
+    APP_ROOT / "apps" / "CVP" / "policy_years.json",
+    APP_ROOT / "CVP" / "policy_years.json",
     APP_ROOT / "apps" / "OTD" / "policy_years.json",
     APP_ROOT / "OTD" / "policy_years.json",
     APP_ROOT / "tools" / "OTD" / "policy_years.json",
@@ -70,6 +74,7 @@ ROOT_PATH = with_base_path("/")
 ASSET_THEME_PATH = with_base_path("/assets/coreportal_theme.css")
 OPEN_APP_PATH = with_base_path("/apps/open/{app_id}")
 VPM_PATH = with_base_path("/VPM")
+CVP_PATH = with_base_path("/CVP")
 OTD_PATH = with_base_path("/OTD")
 TRACKER_PATH = with_base_path("/BAT")
 DEFAULT_PORTFOLIO_NAME = "Main Portfolio"
@@ -111,18 +116,18 @@ BACKUP_DIR = VPM_DIR / "portfolio_backups"
 LEGACY_DB_PATHS = [APP_ROOT / "virtual_portfolio.db"]
 LEGACY_BACKUP_DIRS = [APP_ROOT / "portfolio_backups"]
 
-def resolve_otd_html_path() -> Path:
-    for candidate in OTD_HTML_CANDIDATES:
+def resolve_cvp_html_path() -> Path:
+    for candidate in CVP_HTML_CANDIDATES:
         if candidate.exists():
             return candidate
-    return OTD_HTML_CANDIDATES[0]
+    return CVP_HTML_CANDIDATES[0]
 
 
-def resolve_otd_policy_path() -> Path:
-    for candidate in OTD_POLICY_CANDIDATES:
+def resolve_cvp_policy_path() -> Path:
+    for candidate in CVP_POLICY_CANDIDATES:
         if candidate.exists():
             return candidate
-    return OTD_POLICY_CANDIDATES[0]
+    return CVP_POLICY_CANDIDATES[0]
 
 
 def resolve_theme_css_path() -> Path:
@@ -132,8 +137,8 @@ def resolve_theme_css_path() -> Path:
     return THEME_CSS_CANDIDATES[0]
 
 
-OTD_HTML_PATH = resolve_otd_html_path()
-OTD_POLICY_PATH = resolve_otd_policy_path()
+CVP_HTML_PATH = resolve_cvp_html_path()
+CVP_POLICY_PATH = resolve_cvp_policy_path()
 THEME_CSS_PATH = resolve_theme_css_path()
 
 
@@ -206,12 +211,12 @@ APP_REGISTRY: list[dict[str, Any]] = [
         "open_path": VPM_PATH,
     },
     {
-        "id": "otd",
-        "name": "OTD · Out-the-Door Estimator",
-        "description": "Out-the-door vehicle pricing calculator. Independent from the portfolio app.",
+        "id": "cvp",
+        "name": "CVP · Car Value Planner",
+        "description": "Vehicle buy/replace planner with out-the-door math and ownership guidance.",
         "type": "static_html",
-        "open_path": OTD_PATH,
-        "file_path": OTD_HTML_PATH,
+        "open_path": CVP_PATH,
+        "file_path": CVP_HTML_PATH,
     },
 ]
 
@@ -2064,7 +2069,7 @@ def render_home_page(message: str = "") -> str:
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>{APP_TITLE}</title>
+    <title>{APP_HOME_TITLE}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         {shared_theme_css()}
@@ -2089,9 +2094,9 @@ def render_home_page(message: str = "") -> str:
 <body>
     <div class="page">
         <section class="hero">
-            <h1>{APP_TITLE}</h1>
-            <p>{APP_AUTHOR}</p>
-            <p>Unified launchpad for portfolio tracking, bank cashflow, net worth, and research tools.</p>
+            <h1>{APP_HOME_TITLE}</h1>
+            <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">{APP_AUTHOR}</p>
+            <p>Unified launchpad for BAT, VPM, CVP, and related financial tools.</p>
             {status_badges_html}
         </section>
         {flash_html}
@@ -2775,7 +2780,7 @@ def render_analysis_page(
     <div class="wrap">
         <section class="top">
             <h1>{APP_TITLE}: Stock Analysis ({html.escape(str(symbol))})</h1>
-            <p>{APP_AUTHOR}</p>
+            <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">{APP_AUTHOR}</p>
             <div class="actions">
                 <a class="btn secondary" href="{back_link}">Back to Portfolio</a>
                 <a class="btn" href="{deeper_link}">One More Click: Deeper View</a>
@@ -3119,7 +3124,7 @@ async def legacy_vpm_redirect(request):
 
 async def legacy_otd_redirect(request):
     query_string = request.url.query
-    target = f"{OTD_PATH}?{query_string}" if query_string else OTD_PATH
+    target = f"{CVP_PATH}?{query_string}" if query_string else CVP_PATH
     return RedirectResponse(url=target, status_code=308)
 
 
@@ -3129,18 +3134,18 @@ async def legacy_tracker_redirect(request):
     return RedirectResponse(url=target, status_code=308)
 
 
-async def otd_tool(request):
-    otd_app_config = get_app_by_id("otd") or {}
+async def cvp_tool(request):
+    otd_app_config = get_app_by_id("cvp") or {}
     otd_path = otd_app_config.get("file_path")
     if not isinstance(otd_path, Path):
-        otd_path = OTD_HTML_PATH
+        otd_path = CVP_HTML_PATH
 
     if not otd_path.exists():
         return HTMLResponse(
-            f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>OTD Tool</title></head>"
+            f"<!doctype html><html lang='en'><head><meta charset='utf-8'><title>CVP Tool</title></head>"
             f"<body style='font-family:Inter,sans-serif;padding:24px;'>"
-            f"<h1>OTD Tool not found</h1>"
-            f"<p>Expected file: <strong>OTD/otd_estimator.html</strong></p>"
+            f"<h1>CVP Tool not found</h1>"
+            f"<p>Expected file: <strong>apps/CVP/cvp_planner.html</strong></p>"
             f"<p><a href='{ROOT_PATH}'>Back to Home</a></p>"
             f"</body></html>",
             status_code=404,
@@ -3150,9 +3155,13 @@ async def otd_tool(request):
     content = (
         content.replace("__COREPORTAL_ASSET_THEME_PATH__", ASSET_THEME_PATH)
         .replace("__COREPORTAL_ROOT_PATH__", ROOT_PATH)
-        .replace("__COREPORTAL_OTD_POLICY_PATH__", f"{OTD_PATH}/policy_years.json")
+        .replace("__COREPORTAL_OTD_POLICY_PATH__", f"{CVP_PATH}/policy_years.json")
     )
     return HTMLResponse(content)
+
+
+async def otd_tool(request):
+    return await cvp_tool(request)
 
 
 async def coreportal_theme_css(request):
@@ -3169,9 +3178,9 @@ async def coreportal_theme_css(request):
     )
 
 
-async def otd_policy_years(request):
-    if OTD_POLICY_PATH.exists():
-        return FileResponse(OTD_POLICY_PATH, media_type="application/json")
+async def cvp_policy_years(request):
+    if CVP_POLICY_PATH.exists():
+        return FileResponse(CVP_POLICY_PATH, media_type="application/json")
     return JSONResponse(
         {
             "2025": {
@@ -3443,7 +3452,7 @@ def render_tracker_page(
     <div class=\"page\">
         <section class=\"hero\">
             <h1>BAT · Bank Account Tracker</h1>
-            <p>{APP_AUTHOR}</p>
+            <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.95;">{APP_AUTHOR}</p>
             <p>Virtual bank-account ledger with built-in owner overview for cashflow, balances, and net worth. Move funds directly into VPM to keep both sides in sync.</p>
             <div class=\"hero-meta\">
                 <div class=\"hero-badge\">Owner: {html.escape(str(current_tenant['name']))}</div>
@@ -4184,9 +4193,11 @@ app = Starlette(
         Route(f"{TRACKER_PATH}/entry/add", tracker_entry_add, methods=["POST"]),
         Route(f"{TRACKER_PATH}/transfer-to-vpm", tracker_transfer_to_vpm, methods=["POST"]),
         Route(f"{TRACKER_PATH}/zeroize", tracker_zeroize, methods=["POST"]),
-        Route(OTD_PATH, otd_tool, methods=["GET"]),
-        Route(f"{OTD_PATH}/policy_years.json", otd_policy_years, methods=["GET"]),
-        Route(with_base_path("/otd/policy_years.json"), otd_policy_years, methods=["GET"]),
+        Route(CVP_PATH, cvp_tool, methods=["GET"]),
+        Route(f"{CVP_PATH}/policy_years.json", cvp_policy_years, methods=["GET"]),
+        Route(OTD_PATH, legacy_otd_redirect, methods=["GET"]),
+        Route(f"{OTD_PATH}/policy_years.json", cvp_policy_years, methods=["GET"]),
+        Route(with_base_path("/otd/policy_years.json"), cvp_policy_years, methods=["GET"]),
         Route(with_base_path("/portfolio"), legacy_vpm_redirect, methods=["GET"]),
         Route(with_base_path("/otd"), legacy_otd_redirect, methods=["GET"]),
         Route(with_base_path("/TRACKER"), legacy_tracker_redirect, methods=["GET"]),
