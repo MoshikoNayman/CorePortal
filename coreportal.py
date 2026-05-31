@@ -5,6 +5,7 @@ import calendar
 import html
 import io
 import json
+import logging
 import os
 import shutil
 import sqlite3
@@ -20,7 +21,9 @@ from urllib.parse import parse_qs, urlencode
 
 import requests
 from starlette.applications import Starlette
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from starlette.middleware import Middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from starlette.routing import Route
 
 APP_ROOT = Path(__file__).parent
@@ -124,6 +127,16 @@ class _TimeoutSession(requests.Session):
 
 
 HTTP = _TimeoutSession()
+
+# --- Logging ---------------------------------------------------------------
+logging.basicConfig(
+    level=os.getenv("COREPORTAL_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("coreportal")
+
+# Process start time, used by the health endpoint to report uptime.
+STARTED_AT = time_module.time()
 
 
 def resolve_vpm_dir() -> Path:
@@ -4235,18 +4248,65 @@ async def api_historical_quote(request):
     return JSONResponse({"ok": True, "symbol": symbol, "date": trade_day, "price": float(price)})
 
 
+async def health_check(request):
+    """Liveness/readiness probe. Verifies the database is reachable."""
+    db_ok = True
+    try:
+        with db_connection() as connection:
+            connection.execute("SELECT 1").fetchone()
+    except Exception as error:  # pragma: no cover - defensive
+        db_ok = False
+        logger.warning("Health check DB probe failed: %s", error)
+
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "database": "ok" if db_ok else "error",
+        "uptime_seconds": int(time_module.time() - STARTED_AT),
+    }
+    return JSONResponse(payload, status_code=200 if db_ok else 503)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Attach a conservative set of security headers to every response."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy", "geolocation=(), microphone=(), camera=()"
+        )
+        return response
+
+
+async def on_internal_error(request, exc):
+    """Log unhandled exceptions and return a generic message (no stack leak)."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return PlainTextResponse("Internal Server Error", status_code=500)
+
+
+async def on_not_found(request, exc):
+    return PlainTextResponse("Not Found", status_code=404)
+
+
 migrate_legacy_vpm_storage()
 init_db()
 remove_legacy_default_owner_maya()
 
 app = Starlette(
     debug=False,
+    middleware=[Middleware(SecurityHeadersMiddleware)],
+    exception_handlers={404: on_not_found, 500: on_internal_error},
     routes=[
         Route(ROOT_PATH, home_page, methods=["GET"]),
+        Route(with_base_path("/healthz"), health_check, methods=["GET"]),
         Route(ASSET_THEME_PATH, coreportal_theme_css, methods=["GET"]),
         Route(OPEN_APP_PATH, open_app, methods=["GET"]),
         Route(VPM_PATH, dashboard, methods=["GET"]),
         Route(TRACKER_PATH, tracker_dashboard, methods=["GET"]),
+        Route(with_base_path("/NWD"), legacy_tracker_redirect, methods=["GET"]),
+        Route(with_base_path("/nwd"), legacy_tracker_redirect, methods=["GET"]),
         Route(f"{TRACKER_PATH}/account/add", tracker_account_add, methods=["POST"]),
         Route(f"{TRACKER_PATH}/deposit", tracker_deposit, methods=["POST"]),
         Route(f"{TRACKER_PATH}/salary/add", tracker_salary_add, methods=["POST"]),
