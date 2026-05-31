@@ -69,6 +69,25 @@ class RouteSmokeTests(unittest.TestCase):
         self.assertIn("1080px", body)
         self.assertNotIn("1240", body)
 
+    def _assert_balanced(self, path):
+        import re
+        _, _, html = request(cc.app, path)
+        body = re.sub(r"<script.*?</script>", "", html, flags=re.S)
+        body = re.sub(r"<style.*?</style>", "", body, flags=re.S)
+        for tag in ("div", "section"):
+            opens = len(re.findall(rf"<{tag}[\s>]", body))
+            closes = len(re.findall(rf"</{tag}>", body))
+            self.assertEqual(opens, closes, f"{path}: <{tag}> open={opens} close={closes}")
+
+    def test_html_structure_balanced(self):
+        # Guards against dangling containers (the analysis page had an unclosed
+        # .wrap div). Checks the main pages and both analysis depths.
+        for path in ["/", "/VPM", "/BAT",
+                     "/analyze?symbol=AAPL&depth=quick",
+                     "/analyze?symbol=MSFT&depth=deep"]:
+            with self.subTest(path=path):
+                self._assert_balanced(path)
+
 
 if __name__ == "__main__":
     unittest.main()

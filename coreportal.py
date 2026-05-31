@@ -3175,7 +3175,8 @@ def render_analysis_page(
         setTimeout(postParentHeight, 120);
         window.addEventListener('resize', postParentHeight);
     </script>
-    <footer class="footer">{APP_COPYRIGHT}</footer>
+        <footer class="footer">{APP_COPYRIGHT}</footer>
+    </div>
 </body>
 </html>
 """
