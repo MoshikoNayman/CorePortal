@@ -51,6 +51,10 @@ HTTP = source.HTTP
 HTTP_TIMEOUT = source.HTTP_TIMEOUT
 logger = source.logger
 
+# Database + request limits
+DB_TIMEOUT = source.DB_TIMEOUT
+MAX_FORM_BYTES = source.MAX_FORM_BYTES
+
 # Current-quote cache
 QUOTE_CACHE_TTL = source.QUOTE_CACHE_TTL
 
@@ -62,5 +66,5 @@ __all__ = [
     "ANALYSIS_MODULES", "ALPHAVANTAGE_API_KEY",
     "VPM_DIR", "DB_PATH", "BACKUP_DIR", "OTD_HTML_PATH", "OTD_POLICY_PATH",
     "CVP_HTML_PATH", "CVP_POLICY_PATH", "THEME_CSS_PATH",
-    "HTTP", "HTTP_TIMEOUT", "logger", "QUOTE_CACHE_TTL",
+    "HTTP", "HTTP_TIMEOUT", "logger", "DB_TIMEOUT", "MAX_FORM_BYTES", "QUOTE_CACHE_TTL",
 ]

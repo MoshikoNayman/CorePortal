@@ -62,6 +62,8 @@ apply when unset.
 | `COREPORTAL_BASE_PATH` | _(empty)_ | URL prefix behind a reverse proxy (e.g. `/coreportal`) |
 | `COREPORTAL_HTTP_TIMEOUT` | `8` | Timeout (s) for outbound market-data calls |
 | `COREPORTAL_QUOTE_TTL` | `60` | Current-quote cache lifetime (s) |
+| `COREPORTAL_DB_TIMEOUT` | `10` | Seconds a DB op waits for a lock |
+| `COREPORTAL_MAX_FORM_BYTES` | `262144` | Max accepted form-POST body size (bytes) |
 | `COREPORTAL_LOG_LEVEL` | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR` |
 | `ALPHAVANTAGE_API_KEY` | _(empty)_ | Enables Alpha Vantage fallback paths |
 

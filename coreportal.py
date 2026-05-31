@@ -114,6 +114,13 @@ ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY", "").strip()
 # timeout a slow upstream can hang a request worker indefinitely.
 HTTP_TIMEOUT = float(os.getenv("COREPORTAL_HTTP_TIMEOUT", "8"))
 
+# Seconds a DB operation waits for a lock before raising "database is locked".
+DB_TIMEOUT = float(os.getenv("COREPORTAL_DB_TIMEOUT", "10"))
+
+# Maximum accepted request-body size for form POSTs (bytes). Protects against
+# unbounded memory use from oversized/malicious uploads.
+MAX_FORM_BYTES = int(os.getenv("COREPORTAL_MAX_FORM_BYTES", str(256 * 1024)))
+
 
 class _TimeoutSession(requests.Session):
     """requests.Session that applies a default timeout to every call.
@@ -409,8 +416,16 @@ def shift_months(input_date: date, months: int) -> date:
 
 
 def db_connection() -> sqlite3.Connection:
-    connection = sqlite3.connect(DB_PATH)
+    # ``timeout`` makes writers wait for a lock instead of failing immediately
+    # with "database is locked"; WAL lets reads run concurrently with a writer.
+    connection = sqlite3.connect(DB_PATH, timeout=DB_TIMEOUT)
     connection.row_factory = sqlite3.Row
+    try:
+        connection.execute("PRAGMA journal_mode=WAL")
+        connection.execute("PRAGMA busy_timeout=%d" % int(DB_TIMEOUT * 1000))
+        connection.execute("PRAGMA foreign_keys=ON")
+    except sqlite3.Error:  # pragma: no cover - pragmas are best-effort
+        pass
     return connection
 
 
@@ -2706,9 +2721,22 @@ def render_dashboard(
 """
 
 
+class FormTooLarge(Exception):
+    """Raised when a submitted form body exceeds MAX_FORM_BYTES."""
+
+
 async def parse_form(request) -> dict[str, str]:
+    # Reject oversized bodies early. Honor Content-Length when present, and also
+    # guard the actual read so a lying/absent header cannot bypass the cap.
+    content_length = request.headers.get("content-length")
+    if content_length and content_length.isdigit() and int(content_length) > MAX_FORM_BYTES:
+        raise FormTooLarge()
+
     body = await request.body()
-    parsed = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+    if len(body) > MAX_FORM_BYTES:
+        raise FormTooLarge()
+
+    parsed = parse_qs(body.decode("utf-8", "replace"), keep_blank_values=True)
     return {key: values[0] if values else "" for key, values in parsed.items()}
 
 
@@ -4329,6 +4357,10 @@ async def on_not_found(request, exc):
     return PlainTextResponse("Not Found", status_code=404)
 
 
+async def on_form_too_large(request, exc):
+    return PlainTextResponse("Request entity too large", status_code=413)
+
+
 migrate_legacy_vpm_storage()
 init_db()
 remove_legacy_default_owner_maya()
@@ -4336,7 +4368,11 @@ remove_legacy_default_owner_maya()
 app = Starlette(
     debug=False,
     middleware=[Middleware(SecurityHeadersMiddleware)],
-    exception_handlers={404: on_not_found, 500: on_internal_error},
+    exception_handlers={
+        404: on_not_found,
+        500: on_internal_error,
+        FormTooLarge: on_form_too_large,
+    },
     routes=[
         Route(ROOT_PATH, home_page, methods=["GET"]),
         Route(with_base_path("/healthz"), health_check, methods=["GET"]),

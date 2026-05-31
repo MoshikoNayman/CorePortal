@@ -44,6 +44,44 @@ class BasePathTests(unittest.TestCase):
         self.assertEqual(cc.config.normalize_base_path("/coreportal/"), "/coreportal")
 
 
+class DatabaseHardeningTests(unittest.TestCase):
+    def test_connection_uses_wal_and_timeout(self):
+        with cc.db.db_connection() as conn:
+            self.assertEqual(
+                conn.execute("PRAGMA journal_mode").fetchone()[0].lower(), "wal"
+            )
+            self.assertGreater(conn.execute("PRAGMA busy_timeout").fetchone()[0], 0)
+            self.assertEqual(conn.execute("PRAGMA foreign_keys").fetchone()[0], 1)
+
+    def test_concurrent_writes_do_not_lock(self):
+        import sqlite3
+        import threading
+
+        errors = []
+
+        def writer(tag):
+            try:
+                for i in range(15):
+                    with cc.db.db_connection() as conn:
+                        conn.execute(
+                            "INSERT INTO cash_ledger (portfolio_id, amount, entry_date, note)"
+                            " VALUES (?,?,?,?)",
+                            (1, "1.00", "2026-01-01", f"unittest-conc-{tag}-{i}"),
+                        )
+            except sqlite3.Error as exc:  # pragma: no cover - failure path
+                errors.append(str(exc))
+
+        threads = [threading.Thread(target=writer, args=(n,)) for n in range(6)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        # Always clean up the rows this test inserted.
+        with cc.db.db_connection() as conn:
+            conn.execute("DELETE FROM cash_ledger WHERE note LIKE 'unittest-conc-%'")
+        self.assertEqual(errors, [])
+
+
 class QuoteCacheTests(unittest.TestCase):
     def setUp(self):
         # Work on the live source module's cache dict and TTL.

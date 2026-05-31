@@ -55,6 +55,8 @@ health_check = source.health_check
 SecurityHeadersMiddleware = source.SecurityHeadersMiddleware
 on_internal_error = source.on_internal_error
 on_not_found = source.on_not_found
+on_form_too_large = source.on_form_too_large
+FormTooLarge = source.FormTooLarge
 
 __all__ = [
     "app",
@@ -67,4 +69,5 @@ __all__ = [
     "snapshot_save", "snapshot_load", "defaults_restore", "portfolio_zeroize",
     "api_current_quote", "api_historical_quote", "health_check",
     "SecurityHeadersMiddleware", "on_internal_error", "on_not_found",
+    "on_form_too_large", "FormTooLarge",
 ]

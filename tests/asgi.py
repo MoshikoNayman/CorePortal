@@ -11,7 +11,13 @@ import asyncio
 from urllib.parse import urlsplit
 
 
-def request(app, path: str, method: str = "GET") -> tuple[int, dict, str]:
+def request(
+    app,
+    path: str,
+    method: str = "GET",
+    body: bytes = b"",
+    headers: list[tuple[bytes, bytes]] | None = None,
+) -> tuple[int, dict, str]:
     """Call ``app`` for ``path`` and return (status, headers, body_text)."""
     parts = urlsplit(path)
 
@@ -22,29 +28,29 @@ def request(app, path: str, method: str = "GET") -> tuple[int, dict, str]:
             "path": parts.path,
             "raw_path": parts.path.encode(),
             "query_string": parts.query.encode(),
-            "headers": [],
+            "headers": list(headers or []),
             "client": ("127.0.0.1", 12345),
             "server": ("127.0.0.1", 8000),
             "scheme": "http",
         }
 
         async def receive():
-            return {"type": "http.request", "body": b"", "more_body": False}
+            return {"type": "http.request", "body": body, "more_body": False}
 
         status = {"code": None}
-        headers: dict[str, str] = {}
+        resp_headers: dict[str, str] = {}
         chunks: list[bytes] = []
 
         async def send(message):
             if message["type"] == "http.response.start":
                 status["code"] = message["status"]
-                headers.update(
+                resp_headers.update(
                     {k.decode().lower(): v.decode() for k, v in message.get("headers", [])}
                 )
             elif message["type"] == "http.response.body":
                 chunks.append(message.get("body", b""))
 
         await app(scope, receive, send)
-        return status["code"], headers, b"".join(chunks).decode("utf-8", "replace")
+        return status["code"], resp_headers, b"".join(chunks).decode("utf-8", "replace")
 
     return asyncio.run(_run())

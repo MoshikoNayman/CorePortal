@@ -89,5 +89,19 @@ class RouteSmokeTests(unittest.TestCase):
                 self._assert_balanced(path)
 
 
+class FormSizeLimitTests(unittest.TestCase):
+    def test_oversized_form_returns_413(self):
+        big = b"amount=" + b"9" * (cc.config.MAX_FORM_BYTES + 1024)
+        headers = [(b"content-length", str(len(big)).encode())]
+        status, _, _ = request(cc.app, "/cash/add", method="POST", body=big, headers=headers)
+        self.assertEqual(status, 413)
+
+    def test_oversized_form_without_content_length_still_413(self):
+        # A lying/absent Content-Length must not bypass the byte cap.
+        big = b"amount=" + b"9" * (cc.config.MAX_FORM_BYTES + 1024)
+        status, _, _ = request(cc.app, "/cash/add", method="POST", body=big)
+        self.assertEqual(status, 413)
+
+
 if __name__ == "__main__":
     unittest.main()

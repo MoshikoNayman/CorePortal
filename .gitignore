@@ -1,3 +1,22 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Runtime data: the live SQLite DB, its WAL/SHM sidecars, and snapshots are
+# per-deployment state, not source. (VPM/README.md stays tracked.)
+VPM/virtual_portfolio.db
+VPM/virtual_portfolio.db-wal
+VPM/virtual_portfolio.db-shm
+VPM/portfolio_backups/
+*.sqlite
+*.sqlite3
+
+# Local env / logs
+.env
+*.log
+
+# OS
+.DS_Store
