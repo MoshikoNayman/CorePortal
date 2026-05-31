@@ -138,6 +138,27 @@ logger = logging.getLogger("coreportal")
 # Process start time, used by the health endpoint to report uptime.
 STARTED_AT = time_module.time()
 
+# Current-quote cache: maps SYMBOL -> (price, fetched_at). Short TTL keeps the
+# dashboard snappy and shields upstreams from repeated identical lookups while
+# staying live enough for paper trading.
+QUOTE_CACHE_TTL = float(os.getenv("COREPORTAL_QUOTE_TTL", "60"))
+_quote_cache: dict[str, tuple[Decimal, float]] = {}
+
+
+def _quote_cache_get(symbol: str) -> Decimal | None:
+    entry = _quote_cache.get(symbol)
+    if not entry:
+        return None
+    price, fetched_at = entry
+    if time_module.time() - fetched_at > QUOTE_CACHE_TTL:
+        _quote_cache.pop(symbol, None)
+        return None
+    return price
+
+
+def _quote_cache_put(symbol: str, price: Decimal) -> None:
+    _quote_cache[symbol] = (price, time_module.time())
+
 
 def resolve_vpm_dir() -> Path:
     for candidate in VPM_DIR_CANDIDATES:
@@ -827,10 +848,23 @@ def fetch_quotes(symbols: list[str]) -> dict[str, Decimal]:
     if not unique_symbols:
         return {}
 
+    quotes: dict[str, Decimal] = {}
+
+    # Serve fresh cache hits first; only fetch the symbols we actually need.
+    pending = []
+    for symbol in unique_symbols:
+        cached = _quote_cache_get(symbol)
+        if cached is not None:
+            quotes[symbol] = cached
+        else:
+            pending.append(symbol)
+    if not pending:
+        return quotes
+
     try:
         response = HTTP.get(
             "https://query1.finance.yahoo.com/v7/finance/quote",
-            params={"symbols": ",".join(unique_symbols)},
+            params={"symbols": ",".join(pending)},
             timeout=6,
         )
         response.raise_for_status()
@@ -838,7 +872,6 @@ def fetch_quotes(symbols: list[str]) -> dict[str, Decimal]:
     except Exception:
         payload = {}
 
-    quotes: dict[str, Decimal] = {}
     results = payload.get("quoteResponse", {}).get("result", [])
     for item in results:
         symbol = str(item.get("symbol", "")).upper().strip()
@@ -849,11 +882,16 @@ def fetch_quotes(symbols: list[str]) -> dict[str, Decimal]:
             except (InvalidOperation, ValueError):
                 continue
 
-    for symbol in unique_symbols:
+    for symbol in pending:
         if symbol not in quotes:
             fallback = fetch_current_quote_stooq(symbol)
             if fallback is not None:
                 quotes[symbol] = fallback
+
+    # Cache everything we resolved this round.
+    for symbol in pending:
+        if symbol in quotes:
+            _quote_cache_put(symbol, quotes[symbol])
     return quotes
 
 
