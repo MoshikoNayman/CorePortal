@@ -55,7 +55,7 @@ APP_TITLE = "VPM · Virtual Portfolio Manager"
 APP_AUTHOR = "by Moshiko Nayman"
 APP_HOME_TITLE = "CorePortal"
 APP_COPYRIGHT = "© 2026 Moshiko Nayman · Proprietary License · All rights reserved."
-COMMON_PAGE_MAX_WIDTH = 1240
+COMMON_PAGE_MAX_WIDTH = 1080
 
 
 def normalize_base_path(raw_path: str) -> str:
@@ -164,9 +164,14 @@ THEME_CSS_PATH = resolve_theme_css_path()
 
 
 def shared_theme_css() -> str:
-    return (
-        f"                                @import url('{ASSET_THEME_PATH}');\n"
-        + """
+    """Single source of truth for shared layout + component styles.
+
+    Page templates only add page-specific rules on top of this. Sizing is kept
+    compact here so the whole UI reads as a tighter window; the page width is
+    driven by the COMMON_PAGE_MAX_WIDTH knob.
+    """
+    css = """
+                                @import url('__THEME__');
         :root {
           --bg: #f4f7fb;
           --card: #ffffff;
@@ -177,13 +182,75 @@ def shared_theme_css() -> str:
           --brand-soft: #edf2ff;
           --gain: #0b7d23;
           --loss: #b22121;
-          --shadow: 0 10px 28px rgba(20, 42, 90, 0.08);
+          --shadow: 0 8px 22px rgba(20, 42, 90, 0.07);
         }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); }
-        .footer { margin-top: 18px; padding: 14px 4px 6px 4px; text-align: center; color: var(--muted); font-size: 12px; }
+        body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); font-size: 14px; }
+
+        /* Page shell */
+        .page, .wrap { max-width: __MAXW__px; width: 100%; margin: 0 auto; padding: 18px; box-sizing: border-box; overflow: hidden; }
+
+        /* Hero banner */
+        .hero { background: linear-gradient(135deg, #13203c, #2952ff); color: #fff; padding: 18px 20px; border-radius: 16px; box-shadow: var(--shadow); }
+        .hero h1 { margin: 0 0 6px 0; font-size: 24px; }
+        .hero p { margin: 0; color: rgba(255,255,255,0.88); line-height: 1.45; }
+        .hero-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .hero-badge { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.20); border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+        .hero-badge a { color: #fff; text-decoration: none; }
+
+        /* Flash / notices */
+        .flash { background: #e8f4ff; border: 1px solid #b8ddff; padding: 10px 12px; border-radius: 10px; margin: 12px 0 0 0; color: #12456d; }
+
+        /* Metric tiles */
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
+        .metric { background: var(--card); padding: 13px; border-radius: 14px; box-shadow: var(--shadow); border: 1px solid rgba(217,225,238,0.75); }
+        .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .value { font-size: 20px; font-weight: 800; margin-top: 4px; }
+
+        /* Cards */
+        .card { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); border: 1px solid rgba(217,225,238,0.75); padding: 14px; min-width: 0; overflow: hidden; }
+        .card h2 { margin: 0 0 8px 0; font-size: 16px; }
+        .card p { color: var(--muted); margin: 0 0 12px 0; line-height: 1.45; }
+
+        /* Layout grids */
+        .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; width: 100%; }
+        .layout > * { min-width: 0; overflow: hidden; }
+        .stack, .main-stack { display: grid; gap: 14px; min-width: 0; }
+
+        /* Forms */
+        form { display: grid; gap: 8px; }
+        label { font-weight: 700; font-size: 12.5px; color: var(--ink); }
+        input, select, button { width: 100%; border-radius: 9px; border: 1px solid var(--line); padding: 8px 10px; font-size: 13px; }
+        input, select { background: #fff; color: var(--ink); }
+        button { background: var(--brand); color: #fff; font-weight: 800; cursor: pointer; border: 0; }
+        button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+
+        /* Pills */
+        .portfolio-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .portfolio-pill { text-decoration: none; color: var(--ink); background: #f5f7fc; border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: 12.5px; }
+        .portfolio-pill.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+        /* Tables */
+        .table-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border-bottom: 1px solid #eef2f8; padding: 7px 8px; text-align: left; font-size: 13px; white-space: nowrap; }
+        th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: #fbfcff; }
+        .gain { color: var(--gain); font-weight: 800; }
+        .loss { color: var(--loss); font-weight: 800; }
+
+        iframe { max-width: 100%; }
+        .footer { margin-top: 16px; padding: 12px 4px 6px 4px; text-align: center; color: var(--muted); font-size: 12px; }
+
+        @media (max-width: 1080px) {
+          .layout { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+          .page, .wrap { padding: 12px; }
+          .hero h1 { font-size: 21px; }
+          .value { font-size: 18px; }
+        }
     """
-    )
+    return css.replace("__THEME__", ASSET_THEME_PATH).replace("__MAXW__", str(COMMON_PAGE_MAX_WIDTH))
 
 
 def ensure_vpm_storage_layout() -> None:
@@ -2102,22 +2169,12 @@ def render_home_page(message: str = "") -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         {shared_theme_css()}
-        .page {{ max-width: {COMMON_PAGE_MAX_WIDTH}px; width: 100%; margin: 0 auto; padding: 24px; box-sizing: border-box; overflow: hidden; }}
-        .hero {{ background: linear-gradient(135deg, #0f172a, #2952ff); color: white; padding: 28px; border-radius: 22px; box-shadow: var(--shadow); }}
-        .hero h1 {{ margin: 0 0 10px 0; font-size: 36px; }}
-        .hero p {{ margin: 0; max-width: 900px; color: rgba(255,255,255,0.88); line-height: 1.55; }}
-        .hero-meta {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }}
-        .hero-badge {{ background: rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.20); border-radius:999px; padding:8px 12px; font-size:13px; }}
-        .flash {{ background:#e8f4ff; border:1px solid #b8ddff; padding:12px 14px; border-radius:12px; margin:16px 0 0 0; color:#12456d; }}
-        .grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:18px; margin-top:20px; }}
-        .card {{ display:block; background:var(--card); border-radius:18px; box-shadow:var(--shadow); border:1px solid rgba(217,225,238,0.75); padding:20px; min-width:0; overflow:hidden; text-decoration:none; color:inherit; }}
-        .card-link:hover {{ transform: translateY(-2px); box-shadow: 0 18px 40px rgba(37, 60, 130, 0.16); }}
+        /* Home launcher specifics */
+        .grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-top:16px; }}
+        .grid .card {{ display:block; text-decoration:none; color:inherit; transition: transform .12s ease, box-shadow .12s ease; }}
+        .card-link:hover {{ transform: translateY(-2px); box-shadow: 0 16px 34px rgba(37, 60, 130, 0.16); }}
         .card-disabled {{ opacity:0.72; }}
-        .badge {{ display:inline-block; margin-bottom:10px; font-size:12px; color:#4b5771; border:1px solid var(--line); background:#f6f8fd; border-radius:999px; padding:4px 10px; font-weight:700; }}
-        .card h2 {{ margin:0 0 8px 0; font-size:22px; }}
-        .card p {{ margin:0; color:var(--muted); line-height:1.45; }}
-        .footer {{ margin-top:18px; color:var(--muted); font-size:13px; text-align:center; }}
-        @media (max-width: 640px) {{ .page {{ padding:14px; }} .hero h1 {{ font-size:28px; }} }}
+        .badge {{ display:inline-block; margin-bottom:8px; font-size:11px; color:#4b5771; border:1px solid var(--line); background:#f6f8fd; border-radius:999px; padding:3px 9px; font-weight:700; }}
     </style>
 </head>
 <body>
@@ -2783,18 +2840,18 @@ def render_analysis_page(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         {shared_theme_css()}
-        .wrap {{ max-width: {COMMON_PAGE_MAX_WIDTH}px; margin: 0 auto; padding: 24px; }}
-        .top {{ background: linear-gradient(135deg, #13203c, #2952ff); color:white; border-radius:16px; padding:20px; }}
-        .top h1 {{ margin:0 0 6px 0; }}
+        /* Analysis page specifics */
+        .top {{ background: linear-gradient(135deg, #13203c, #2952ff); color:white; border-radius:16px; padding:18px; }}
+        .top h1 {{ margin:0 0 6px 0; font-size:22px; }}
         .top p {{ margin:0; opacity:0.9; }}
-        .actions {{ margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }}
-        .btn {{ text-decoration:none; color:white; background:#2952ff; border-radius:10px; padding:10px 14px; font-weight:700; }}
+        .actions {{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }}
+        .btn {{ text-decoration:none; color:white; background:#2952ff; border-radius:9px; padding:8px 12px; font-weight:700; }}
         .btn.secondary {{ background:white; color:#13203c; border:1px solid #d9e1ee; }}
-        .card {{ margin-top:14px; background:white; border-radius:14px; padding:16px; border:1px solid #d9e1ee; box-shadow:0 8px 20px rgba(20,42,90,0.08); }}
+        .card {{ margin-top:14px; }}
         .flash {{ background: #fff8e8; border:1px solid #ffe2a9; color:#684b00; padding:10px; border-radius:10px; margin-top:12px; }}
-        table {{ width:100%; border-collapse: collapse; table-layout: fixed; }}
-        td, th {{ border-bottom:1px solid #eef2f8; text-align:left; padding:9px 8px; vertical-align:top; }}
-        .key-cell {{ width: 280px; color:#4b5771; font-size:13px; font-weight:700; text-transform:none; letter-spacing:0; }}
+        table {{ table-layout: fixed; }}
+        td, th {{ vertical-align:top; }}
+        .key-cell {{ width: 240px; color:#4b5771; font-weight:700; text-transform:none; letter-spacing:0; }}
         .chart-wrap {{ margin-top:10px; background:#fbfcff; border:1px solid #d9e1ee; border-radius:12px; padding:10px; }}
         .chart-actions {{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 8px 0; }}
         .chart-actions button {{ border:1px solid #d9e1ee; background:white; color:#11203b; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; font-weight:700; }}
@@ -3466,53 +3523,19 @@ def render_tracker_page(
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
     <style>
         {shared_theme_css()}
-        .page {{ max-width: {COMMON_PAGE_MAX_WIDTH}px; width: 100%; margin: 0 auto; padding: 24px; box-sizing: border-box; overflow: hidden; }}
-        .hero {{ background: linear-gradient(135deg, #13203c, #2952ff); color: white; padding: 24px; border-radius: 20px; box-shadow: var(--shadow); }}
-        .hero h1 {{ margin: 0 0 8px 0; font-size: 34px; }}
-        .hero p {{ margin: 0; max-width: 920px; color: rgba(255,255,255,0.86); line-height: 1.5; }}
-        .hero-meta {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }}
-        .hero-badge {{ background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 8px 12px; font-size: 13px; }}
-        .hero-badge a {{ color:#fff; text-decoration:none; }}
-        .flash {{ background: #e8f4ff; border: 1px solid #b8ddff; padding: 12px 14px; border-radius: 12px; margin: 16px 0 0 0; color: #12456d; }}
-        .metrics {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 18px 0; }}
-        .metric {{ background: var(--card); padding: 16px; border-radius: 16px; box-shadow: var(--shadow); border: 1px solid rgba(217,225,238,0.75); }}
-        .label {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }}
-        .value {{ font-size: 26px; font-weight: 800; margin-top: 6px; }}
-        .glance {{ margin-bottom:18px; }}
+        /* Tracker specifics */
+        .glance {{ margin-bottom:14px; }}
         .glance-controls {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }}
-        .glance-graph {{ width:100%; height:220px; border:1px solid var(--line); border-radius:12px; background:#fff; display:block; }}
-        .glance-boxes {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:12px; }}
-        .glance-box {{ border:1px solid var(--line); border-radius:12px; background:#fff; padding:14px; }}
-        .glance-box .k {{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.05em; }}
-        .glance-box .v {{ font-size:24px; font-weight:900; margin-top:6px; }}
-        .glance-box .s {{ color:var(--muted); font-size:13px; margin-top:2px; }}
-        .overview-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:18px; margin-bottom:18px; min-width:0; width:100%; }}
+        .glance-graph {{ width:100%; height:200px; border:1px solid var(--line); border-radius:12px; background:#fff; display:block; }}
+        .glance-boxes {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px; }}
+        .glance-box {{ border:1px solid var(--line); border-radius:12px; background:#fff; padding:12px; }}
+        .glance-box .k {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }}
+        .glance-box .v {{ font-size:20px; font-weight:900; margin-top:4px; }}
+        .glance-box .s {{ color:var(--muted); font-size:12.5px; margin-top:2px; }}
+        .overview-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px; min-width:0; width:100%; }}
         .overview-grid > * {{ min-width:0; overflow:hidden; }}
-        .layout {{ display:grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items:start; min-width:0; width:100%; }}
-        .layout > * {{ min-width:0; overflow:hidden; }}
-        .stack {{ display:grid; gap:18px; min-width:0; }}
-        .main-stack {{ display:grid; gap:18px; min-width:0; }}
-        .actions-grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:18px; margin-top:18px; }}
-        .card {{ background: var(--card); border-radius: 18px; box-shadow: var(--shadow); border: 1px solid rgba(217,225,238,0.75); padding: 18px; min-width:0; overflow:hidden; }}
-        .card h2 {{ margin:0 0 8px 0; font-size: 21px; }}
-        .card p {{ margin:0 0 14px 0; color: var(--muted); line-height: 1.45; }}
-        .table-wrap {{ overflow-x:auto; width:100%; }}
-        form {{ display:grid; gap:9px; }}
-        label {{ font-weight:700; font-size:13px; color: var(--ink); }}
-        input, select, button {{ width:100%; border-radius:10px; border:1px solid var(--line); padding:11px 12px; font-size:14px; }}
-        input, select {{ background:#fff; color:var(--ink); }}
-        button {{ background:var(--brand); color:#fff; font-weight:800; cursor:pointer; border:0; }}
-        button.secondary {{ background:#fff; color:var(--ink); border:1px solid var(--line); }}
-        .portfolio-nav {{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }}
-        .portfolio-pill {{ text-decoration:none; color: var(--ink); background:#f5f7fc; border:1px solid var(--line); border-radius:999px; padding:8px 12px; font-weight:700; font-size:13px; }}
-        .portfolio-pill.active {{ background:var(--brand); color:#fff; border-color:var(--brand); }}
-        table {{ width:100%; border-collapse: collapse; }}
-        th, td {{ border-bottom:1px solid #eef2f8; padding:10px 8px; text-align:left; font-size:14px; white-space:nowrap; }}
-        th {{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.05em; background:#fbfcff; }}
-        .gain {{ color:var(--gain); font-weight:800; }}
-        .loss {{ color:var(--loss); font-weight:800; }}
-        @media (max-width: 1080px) {{ .overview-grid {{ grid-template-columns: 1fr; }} .layout {{ grid-template-columns: 1fr; }} }}
-        @media (max-width: 640px) {{ .page {{ padding:14px; }} .hero h1 {{ font-size:28px; }} }}
+        .actions-grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-top:14px; }}
+        @media (max-width: 1080px) {{ .overview-grid {{ grid-template-columns: 1fr; }} }}
     </style>
 </head>
 <body>
