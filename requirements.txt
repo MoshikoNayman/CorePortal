@@ -1,3 +1,6 @@
-starlette>=0.37.0
-uvicorn>=0.30.0
-requests>=2.31.0
+# Runtime dependencies. Lower bounds keep compatibility with the deploy box
+# (Python 3.11); upper bounds prevent a breaking major from being pulled in
+# unexpectedly. Verified working with starlette 1.2, uvicorn 0.48, requests 2.34.
+starlette>=0.37,<2.0
+uvicorn>=0.30,<1.0
+requests>=2.31,<3.0
