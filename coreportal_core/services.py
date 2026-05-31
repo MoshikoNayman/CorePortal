@@ -1,7 +1,7 @@
 """Service layer: orchestration that bridges the database and market data.
 
 Functions here combine persisted state (positions, balances, ledgers) with
-live quotes — e.g. valuing open positions, moving funds between the bank
+live quotes - e.g. valuing open positions, moving funds between the bank
 tracker and a portfolio, and assembling the owner finance snapshot used by the
 tracker dashboard. Also includes money-formatting helpers and the app registry
 process management used by the home launcher.

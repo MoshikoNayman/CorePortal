@@ -1,12 +1,12 @@
-"""CorePortal — a layered view of the application.
+"""CorePortal - a layered view of the application.
 
 CorePortal is a personal finance & portfolio web app (Starlette + Uvicorn,
 SQLite-backed) bundling several tools behind one launcher:
 
-* **VPM** — Virtual Portfolio Manager (paper trading, live quotes, analysis)
-* **BAT** — Bank Account Tracker (ledger, cashflow, net-worth, transfers)
-* **OTD** — Out-the-Door vehicle pricing estimator
-* **CVP** — Car Value / buy-sell TCO planner
+* **VPM** - Virtual Portfolio Manager (paper trading, live quotes, analysis)
+* **BAT** - Bank Account Tracker (ledger, cashflow, net-worth, transfers)
+* **OTD** - Out-the-Door vehicle pricing estimator
+* **CVP** - Car Value / buy-sell TCO planner
 
 The deployable entrypoint is the top-level ``coreportal.py``. This package
 re-exposes that code as a clean, documented set of layers so the structure is

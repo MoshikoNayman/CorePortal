@@ -5,18 +5,18 @@ that bundles several tools behind one launcher.
 
 ## Tools
 
-- `/` — Home launcher
-- `/VPM` — **Virtual Portfolio Manager**: multi-tenant paper trading with
+- `/` - Home launcher
+- `/VPM` - **Virtual Portfolio Manager**: multi-tenant paper trading with
   owners, portfolios, cash ledger, simulated trades, live quotes, charts, and
   stock analysis (`/analyze`).
-- `/BAT` — **Bank Account Tracker**: ledger, salary/spending, net-worth series,
+- `/BAT` - **Bank Account Tracker**: ledger, salary/spending, net-worth series,
   and transfer-to-VPM. (`/NWD` is a compatibility alias that redirects here.)
-- `/OTD` — Out-the-Door vehicle pricing estimator.
-- `/CVP` — Car Value / buy-sell TCO planner.
+- `/OTD` - Out-the-Door vehicle pricing estimator.
+- `/CVP` - Car Value / buy-sell TCO planner.
 
 Operational endpoint:
 
-- `/healthz` — JSON health probe (checks the database; `503` if unreachable).
+- `/healthz` - JSON health probe (checks the database; `503` if unreachable).
 
 ## Layout
 
@@ -110,7 +110,7 @@ Open http://<server-ip>/coreportal
 - BAT is DB-first (SQLite is the source of truth); CSV is import/export only.
 - VPM stays separate by design.
 - Keep `.venv` for dependency isolation on the server. The bundled `.venv` is
-  Linux-specific — recreate it locally on macOS if you develop here.
+  Linux-specific - recreate it locally on macOS if you develop here.
 - To reduce preprod folder bloat:
   ```bash
   ./scripts/venv_maintenance.sh --status

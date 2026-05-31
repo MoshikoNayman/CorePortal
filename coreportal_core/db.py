@@ -1,6 +1,6 @@
 """Database layer: SQLite connection, schema, snapshots, and CRUD.
 
-Pure persistence — this layer never reaches out to market-data providers.
+Pure persistence - this layer never reaches out to market-data providers.
 Numeric parsing helpers (``to_decimal`` etc.) live here because every query
 result is normalized through them.
 """
