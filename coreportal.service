@@ -4,13 +4,22 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/coreportal
+User=mnayman
+WorkingDirectory=/var/www/html/coreportal
 Environment=PORT=8081
+Environment=COREPORTAL_BASE_PATH=/coreportal
+# Optional overrides (HTTP timeout, quote cache TTL, log level) can live here:
 EnvironmentFile=-/etc/default/coreportal
-ExecStart=/usr/bin/python3 /home/pi/coreportal/coreportal.py --host 0.0.0.0 --port ${PORT}
+ExecStart=/var/www/html/coreportal/.venv/bin/python /var/www/html/coreportal/coreportal.py --host 127.0.0.1 --port ${PORT}
 Restart=always
 RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/www/html/coreportal/VPM
 
 [Install]
 WantedBy=multi-user.target
