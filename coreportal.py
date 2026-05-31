@@ -107,6 +107,24 @@ ANALYSIS_MODULES = [
 
 ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY", "").strip()
 
+# Default timeout (seconds) for all outbound market-data HTTP calls. Without a
+# timeout a slow upstream can hang a request worker indefinitely.
+HTTP_TIMEOUT = float(os.getenv("COREPORTAL_HTTP_TIMEOUT", "8"))
+
+
+class _TimeoutSession(requests.Session):
+    """requests.Session that applies a default timeout to every call.
+
+    Call sites can still pass an explicit ``timeout=`` to override it.
+    """
+
+    def request(self, *args: Any, **kwargs: Any):
+        kwargs.setdefault("timeout", HTTP_TIMEOUT)
+        return super().request(*args, **kwargs)
+
+
+HTTP = _TimeoutSession()
+
 
 def resolve_vpm_dir() -> Path:
     for candidate in VPM_DIR_CANDIDATES:
@@ -797,7 +815,7 @@ def fetch_quotes(symbols: list[str]) -> dict[str, Decimal]:
         return {}
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://query1.finance.yahoo.com/v7/finance/quote",
             params={"symbols": ",".join(unique_symbols)},
             timeout=6,
@@ -838,7 +856,7 @@ def stooq_symbol(symbol: str) -> str:
 def fetch_current_quote_stooq(symbol: str) -> Decimal | None:
     stooq = stooq_symbol(symbol)
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://stooq.com/q/l/",
             params={"s": stooq, "f": "sd2t2ohlcv", "h": "", "e": "csv"},
             timeout=6,
@@ -866,7 +884,7 @@ def fetch_historical_close_stooq(symbol: str, trade_day: str) -> Decimal | None:
         return None
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://stooq.com/q/d/l/",
             params={"s": stooq, "i": "d"},
             timeout=8,
@@ -907,7 +925,7 @@ def fetch_historical_close_stooq(symbol: str, trade_day: str) -> Decimal | None:
 def fetch_chart_series_stooq(symbol: str, max_points: int = 1500) -> tuple[list[int], list[float]]:
     stooq = stooq_symbol(symbol)
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://stooq.com/q/d/l/",
             params={"s": stooq, "i": "d"},
             timeout=8,
@@ -960,7 +978,7 @@ def fetch_historical_close(symbol: str, trade_day: str) -> Decimal | None:
     window_start = datetime.combine(parsed_date - timedelta(days=14), time.min, tzinfo=timezone.utc)
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_symbol}",
             params={
                 "period1": int(day_start.timestamp()),
@@ -998,7 +1016,7 @@ def fetch_historical_close(symbol: str, trade_day: str) -> Decimal | None:
         return chosen_close
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_symbol}",
             params={
                 "period1": int(window_start.timestamp()),
@@ -1157,7 +1175,7 @@ def fetch_quote_summary(symbol: str) -> dict[str, Any]:
     if not clean_symbol:
         return {}
     try:
-        response = requests.get(
+        response = HTTP.get(
             f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{clean_symbol}",
             params={"modules": ",".join(ANALYSIS_MODULES)},
             timeout=8,
@@ -1174,7 +1192,7 @@ def fetch_quote_snapshot(symbol: str) -> dict[str, Any]:
         return {}
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://query1.finance.yahoo.com/v7/finance/quote",
             params={"symbols": clean_symbol},
             timeout=8,
@@ -1199,7 +1217,7 @@ def fetch_alpha_overview(symbol: str) -> dict[str, Any]:
         return {}
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://www.alphavantage.co/query",
             params={"function": "OVERVIEW", "symbol": clean_symbol, "apikey": ALPHAVANTAGE_API_KEY},
             timeout=10,
@@ -1223,7 +1241,7 @@ def fetch_alpha_quote(symbol: str) -> dict[str, Any]:
         return {}
 
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://www.alphavantage.co/query",
             params={"function": "GLOBAL_QUOTE", "symbol": clean_symbol, "apikey": ALPHAVANTAGE_API_KEY},
             timeout=10,
@@ -1241,7 +1259,7 @@ def fetch_chart(symbol: str, range_value: str = "1y", interval: str = "1d") -> d
     if not clean_symbol:
         return {}
     try:
-        response = requests.get(
+        response = HTTP.get(
             f"https://query1.finance.yahoo.com/v8/finance/chart/{clean_symbol}",
             params={"range": range_value, "interval": interval, "events": "history", "includePrePost": "false"},
             timeout=8,
@@ -1257,7 +1275,7 @@ def fetch_recent_news(symbol: str) -> list[dict[str, str]]:
     if not clean_symbol:
         return []
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://query1.finance.yahoo.com/v1/finance/search",
             params={"q": clean_symbol, "quotesCount": 1, "newsCount": 5},
             timeout=8,
@@ -1284,7 +1302,7 @@ def resolve_symbol_input(raw_input: str) -> tuple[str | None, str]:
 
     search_failed = False
     try:
-        response = requests.get(
+        response = HTTP.get(
             "https://query1.finance.yahoo.com/v1/finance/search",
             params={"q": raw_input.strip(), "quotesCount": 8, "newsCount": 0},
             timeout=8,
@@ -2047,7 +2065,7 @@ def get_app_by_id(app_id: str) -> dict[str, Any] | None:
 
 def is_http_ready(url: str, timeout_seconds: float = 1.5) -> bool:
     try:
-        response = requests.get(url, timeout=timeout_seconds)
+        response = HTTP.get(url, timeout=timeout_seconds)
         return response.status_code < 500
     except Exception:
         return False
@@ -2328,52 +2346,11 @@ def render_dashboard(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
         {shared_theme_css()}
-    .page {{ max-width: {COMMON_PAGE_MAX_WIDTH}px; width: 100%; margin: 0 auto; padding: 24px; box-sizing: border-box; overflow: hidden; }}
-    .hero {{ background: linear-gradient(135deg, #13203c, #2952ff); color: white; padding: 24px; border-radius: 20px; box-shadow: var(--shadow); }}
-    .hero h1 {{ margin: 0 0 8px 0; font-size: 34px; }}
-    .hero p {{ margin: 0; color: rgba(255,255,255,0.86); line-height: 1.5; }}
-    .hero-meta {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }}
-    .hero-badge {{ background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 8px 12px; font-size: 13px; }}
-    .flash {{ background: #e8f4ff; border: 1px solid #b8ddff; padding: 12px 14px; border-radius: 12px; margin: 16px 0 0 0; color: #12456d; }}
-    .metrics {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 18px 0; }}
-    .metric {{ background: var(--card); padding: 16px; border-radius: 16px; box-shadow: var(--shadow); border: 1px solid rgba(217, 225, 238, 0.75); }}
-    .label {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }}
-    .value {{ font-size: 26px; font-weight: 800; margin-top: 6px; }}
-    .layout {{ display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; min-width: 0; width: 100%; }}
-    .layout > * {{ min-width: 0; overflow: hidden; }}
-    .stack {{ display: grid; gap: 18px; min-width: 0; }}
-    .main-stack {{ display: grid; gap: 18px; min-width: 0; }}
-    .card {{ background: var(--card); border-radius: 18px; box-shadow: var(--shadow); border: 1px solid rgba(217, 225, 238, 0.75); padding: 18px; min-width: 0; overflow: hidden; }}
-    .card h2 {{ margin: 0 0 8px 0; font-size: 21px; }}
-    .card p {{ color: var(--muted); margin: 0 0 14px 0; line-height: 1.45; }}
+    /* Dashboard specifics */
     .section-title {{ display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 10px; }}
-    form {{ display: grid; gap: 9px; }}
-    label {{ font-weight: 700; font-size: 13px; color: var(--ink); }}
-    input, select, button {{ width: 100%; border-radius: 10px; border: 1px solid var(--line); padding: 11px 12px; font-size: 14px; }}
-    input, select {{ background: white; color: var(--ink); }}
-    button {{ background: var(--brand); color: white; font-weight: 800; cursor: pointer; border: 0; }}
-    button.secondary {{ background: white; color: var(--ink); border: 1px solid var(--line); }}
     .button-row {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .button-row button {{ flex: 1 1 160px; }}
-    .portfolio-nav {{ display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }}
-    .portfolio-pill {{ text-decoration: none; color: var(--ink); background: #f5f7fc; border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 13px; }}
-    .portfolio-pill.active {{ background: var(--brand); color: white; border-color: var(--brand); }}
     .muted-note {{ color: var(--muted); font-size: 13px; line-height: 1.45; }}
-    .table-wrap {{ overflow-x: auto; width: 100%; max-width: 100%; }}
-    iframe {{ max-width: 100%; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ border-bottom: 1px solid #eef2f8; padding: 10px 8px; text-align: left; font-size: 14px; white-space: nowrap; }}
-    th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; background: #fbfcff; }}
-    .gain {{ color: var(--gain); font-weight: 800; }}
-    .loss {{ color: var(--loss); font-weight: 800; }}
-    @media (max-width: 1080px) {{
-      .layout {{ grid-template-columns: 1fr; }}
-    }}
-    @media (max-width: 640px) {{
-      .page {{ padding: 14px; }}
-      .hero h1 {{ font-size: 28px; }}
-      .value {{ font-size: 22px; }}
-    }}
   </style>
 </head>
 <body>
@@ -2880,46 +2857,40 @@ def render_analysis_page(
                 <tbody>{quick_rows}</tbody>
             </table>
             {missing_html}
-            <div class="main-stack">
-                <section class="card">
-                    <h2>Ledger: {html.escape(str(current_account['name']))}</h2>
-                    <p>All income and expense entries for the selected account. Future salary projections appear here but are excluded from the current balance.</p>
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Amount</th>
-                                    <th>Date</th>
-                                    <th>Category</th>
-                                    <th>Note</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {entry_rows_html}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <section class="card">
-                    <h2>Deposit Cash</h2>
-                    <p>Add funds any time, including paycheck, bonus, or one-off deposit.</p>
-                    <form method="post" action="{TRACKER_PATH}/deposit">
-                        <input type="hidden" name="tenant_id" value="{current_tenant_id}">
-                        <input type="hidden" name="account_id" value="{current_account_id}">
-                        <label>Amount</label>
-                        <input name="amount" type="number" min="0.01" step="0.01" placeholder="1000.00" required>
-                        <label>Date</label>
-                        <input name="entry_date" type="date" value="{today_value}" required>
-                        <label>Note</label>
-                        <input name="note" type="text" maxlength="250" placeholder="Paycheck / bonus / cash deposit">
-                        <button type="submit">Deposit</button>
-                    </form>
-                </section>
+            <div class="chart-wrap">
+                <div class="chart-actions">
+                    <button type="button" data-range="1M">1M</button>
+                    <button type="button" data-range="3M">3M</button>
+                    <button type="button" data-range="6M">6M</button>
+                    <button type="button" data-range="1Y" class="active">1Y</button>
+                    <button type="button" data-range="5Y">5Y</button>
+                    <button type="button" data-range="10Y">10Y</button>
+                    <button type="button" data-range="ALL">ALL</button>
+                </div>
+                <canvas id="quick-chart"></canvas>
+                <div class="chart-meta" id="chart-summary"></div>
+                <div class="chart-muted" id="chart-status"></div>
             </div>
+        </section>
+        {deep_html}
     <script>
         const chartPayload = {chart_json};
         const chartCanvas = document.getElementById('quick-chart');
+        const chartButtons = Array.from(document.querySelectorAll('.chart-actions button'));
+        const chartSummary = document.getElementById('chart-summary');
+        const chartStatus = document.getElementById('chart-status');
+        let activeRange = '1Y';
+        let activeLabels = [];
+        let activePrices = [];
+        let activeHoverIndex = null;
+        let drawModel = null;
+
+        function rangeDays(label) {{
+            if (label === '1M') return 30;
+            if (label === '3M') return 91;
+            if (label === '6M') return 182;
+            if (label === '1Y') return 365;
+            if (label === '5Y') return 1825;
             if (label === '10Y') return 3650;
             return null;
         }}
