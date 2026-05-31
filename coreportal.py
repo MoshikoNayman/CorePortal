@@ -2264,6 +2264,11 @@ def render_home_page(message: str = "") -> str:
         f"<div class='hero-badge'>Missing files: {missing_apps}</div>"
         f"</div>"
     )
+    logout_html = (
+        f"<div style='text-align:right; margin-top:10px;'>"
+        f"<a href='{with_base_path('/logout')}' style='color:var(--muted); font-size:12px;'>Sign out</a></div>"
+        if AUTH_ENABLED else ""
+    )
 
     return f"""
 <!doctype html>
