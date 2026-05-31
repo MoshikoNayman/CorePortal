@@ -1,130 +1,122 @@
-# CorePortal (Deploy)
+# CorePortal
 
-Simple deploy folder for the personal finance and portfolio web app.
+A personal finance & portfolio web app (Starlette + Uvicorn, SQLite-backed)
+that bundles several tools behind one launcher.
 
-## What you get
+## Tools
 
-- `coreportal.py` - app entrypoint
-- `requirements.txt` - Python deps
-- `coreportal.service` - optional systemd service
-- `VPM/virtual_portfolio.db` - SQLite data file (created/used by app)
+- `/` — Home launcher
+- `/VPM` — **Virtual Portfolio Manager**: multi-tenant paper trading with
+  owners, portfolios, cash ledger, simulated trades, live quotes, charts, and
+  stock analysis (`/analyze`).
+- `/BAT` — **Bank Account Tracker**: ledger, salary/spending, net-worth series,
+  and transfer-to-VPM. (`/NWD` is a compatibility alias that redirects here.)
+- `/OTD` — Out-the-Door vehicle pricing estimator.
+- `/CVP` — Car Value / buy-sell TCO planner.
 
-## Main pages
+Operational endpoint:
 
-- `/` - Home
-- `/VPM` - Virtual Portfolio Manager
-- `/BAT` - bank ledger + owner overview + net worth view
-- `/NWD` - compatibility alias to `/BAT`
-- `/OTD` - Out-the-Door Estimator (original tool)
-- `/CVP` - Car Value Planner (new buy/sell + TCO planner)
+- `/healthz` — JSON health probe (checks the database; `503` if unreachable).
 
-## Quick run
+## Layout
+
+```
+coreportal.py            Deployable ASGI entrypoint (the source of truth)
+coreportal_core/         Layered, documented view of the same app:
+  config.py                constants, paths, HTTP session, logging, quote cache
+  db.py                    SQLite connection, schema, snapshots, CRUD
+  quotes.py                market data (quotes/charts/news) + formatting
+  services.py              orchestration bridging db + quotes
+  views.py                 HTML rendering + shared stylesheet
+  routes.py                request handlers, middleware, the ASGI app
+apps/                    OTD/CVP static tools + shared theme CSS
+VPM/                     SQLite database + portfolio backups (runtime state)
+tests/                   unittest suite (no third-party deps)
+```
+
+Dependency direction is strictly downward:
+`config → db → quotes → services → views → routes`.
+
+Both `coreportal:app` and `coreportal_core:app` are valid ASGI targets and
+refer to the same application instance.
+
+## Quick start
 
 ```bash
-cd deploy/coreportal
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 coreportal.py --host 0.0.0.0 --port 8081
 ```
 
-Open:
+Open http://localhost:8081
 
-```text
-http://<server-ip>:8081
-```
+## Configuration
 
-## Optional systemd service
+All settings are environment variables (see `.env.example`); sensible defaults
+apply when unset.
 
-```bash
-sudo cp coreportal.service /etc/systemd/system/coreportal.service
-sudo systemctl daemon-reload
-sudo systemctl enable coreportal
-sudo systemctl start coreportal
-```
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `8081` | TCP port to bind |
+| `COREPORTAL_BASE_PATH` | _(empty)_ | URL prefix behind a reverse proxy (e.g. `/coreportal`) |
+| `COREPORTAL_HTTP_TIMEOUT` | `8` | Timeout (s) for outbound market-data calls |
+| `COREPORTAL_QUOTE_TTL` | `60` | Current-quote cache lifetime (s) |
+| `COREPORTAL_LOG_LEVEL` | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR` |
+| `ALPHAVANTAGE_API_KEY` | _(empty)_ | Enables Alpha Vantage fallback paths |
 
-## Deploy to a web server at /coreportal
-
-Copy the folder to the server:
-
-```bash
-scp -r deploy/coreportal mnayman@<server-ip>:/var/www/html/coreportal
-```
-
-SSH to the server and run:
+## Tests
 
 ```bash
+python3 -m unittest discover -s tests
+```
+
+The suite drives the ASGI app in-process (no sockets, no network) and covers
+route smoke tests, the DB/formatting helpers, base-path logic, and the quote
+cache.
+
+## Deploy (systemd + Apache at /coreportal)
+
+```bash
+scp -r coreportal mnayman@<server-ip>:/var/www/html/coreportal
+ssh mnayman@<server-ip>
 cd /var/www/html/coreportal
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-```
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
-Create the service:
-
-```bash
-sudo tee /etc/systemd/system/coreportal.service >/dev/null <<'EOF'
-[Unit]
-Description=CorePortal
-After=network.target
-
-[Service]
-Type=simple
-User=mnayman
-WorkingDirectory=/var/www/html/coreportal
-Environment=PORT=8081
-Environment=COREPORTAL_BASE_PATH=/coreportal
-ExecStart=/var/www/html/coreportal/.venv/bin/python /var/www/html/coreportal/coreportal.py --host 127.0.0.1 --port ${PORT}
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
+sudo cp coreportal.service /etc/systemd/system/coreportal.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now coreportal
 ```
 
-Enable Apache proxy:
+Apache reverse proxy:
 
-```bash
-sudo a2enmod proxy proxy_http headers
-sudo tee /etc/apache2/conf-available/coreportal-proxy.conf >/dev/null <<'EOF'
+```apache
 ProxyPreserveHost On
 ProxyPass /coreportal http://127.0.0.1:8081/coreportal
 ProxyPassReverse /coreportal http://127.0.0.1:8081/coreportal
 RequestHeader set X-Forwarded-Proto "http"
 RequestHeader set X-Forwarded-Prefix "/coreportal"
-EOF
+```
 
-sudo a2enconf coreportal-proxy
+```bash
+sudo a2enmod proxy proxy_http headers
 sudo systemctl reload apache2
 ```
 
-Open:
-
-```text
-http://<server-ip>/coreportal
-```
+Open http://<server-ip>/coreportal
 
 ## Notes
 
-- BAT is DB-first (SQLite is source of truth)
-- CSV should be import/export only, not live sync
-- VPM stays separate by design
-- Keep `.venv` for reliability and dependency isolation on the server
-- To reduce folder bloat/noise in preprod, run:
-
-```bash
-./scripts/venv_maintenance.sh --status
-./scripts/venv_maintenance.sh --prune
-```
+- BAT is DB-first (SQLite is the source of truth); CSV is import/export only.
+- VPM stays separate by design.
+- Keep `.venv` for dependency isolation on the server. The bundled `.venv` is
+  Linux-specific — recreate it locally on macOS if you develop here.
+- To reduce preprod folder bloat:
+  ```bash
+  ./scripts/venv_maintenance.sh --status
+  ./scripts/venv_maintenance.sh --prune
+  ```
 
 ## License
 
-This deploy bundle is proprietary.
-
-See:
-
-- `LICENSE-PROPRIETARY.md`
-- `COPYRIGHT`
+Proprietary. See `LICENSE-PROPRIETARY.md` and `COPYRIGHT`.
