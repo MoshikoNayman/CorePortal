@@ -65,7 +65,19 @@ apply when unset.
 | `COREPORTAL_DB_TIMEOUT` | `10` | Seconds a DB op waits for a lock |
 | `COREPORTAL_MAX_FORM_BYTES` | `262144` | Max accepted form-POST body size (bytes) |
 | `COREPORTAL_LOG_LEVEL` | `INFO` | `DEBUG`/`INFO`/`WARNING`/`ERROR` |
+| `COREPORTAL_AUTH_PASSWORD` | _(empty)_ | Set to require login; empty leaves the app open |
+| `COREPORTAL_SECRET_KEY` | _(random)_ | Signs session cookies; set a stable value in production |
+| `COREPORTAL_SESSION_MAX_AGE` | `604800` | Session lifetime in seconds (7 days) |
 | `ALPHAVANTAGE_API_KEY` | _(empty)_ | Enables Alpha Vantage fallback paths |
+
+### Authentication
+
+By default CorePortal is open (intended to sit behind a trusted reverse proxy).
+Set `COREPORTAL_AUTH_PASSWORD` to require a single shared password: every page
+except `/login` and `/healthz` then needs a signed, HttpOnly, SameSite=Strict
+session cookie. Sign out at `/logout`. All state-changing requests are also
+protected by a same-origin (CSRF) check regardless of whether auth is enabled.
+Set a stable `COREPORTAL_SECRET_KEY` so sessions survive restarts.
 
 ## Tests
 

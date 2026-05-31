@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import csv
 import calendar
+import hashlib
+import hmac
 import html
 import io
 import json
 import logging
 import os
+import secrets
 import shutil
 import sqlite3
 import subprocess
@@ -120,6 +123,24 @@ DB_TIMEOUT = float(os.getenv("COREPORTAL_DB_TIMEOUT", "10"))
 # Maximum accepted request-body size for form POSTs (bytes). Protects against
 # unbounded memory use from oversized/malicious uploads.
 MAX_FORM_BYTES = int(os.getenv("COREPORTAL_MAX_FORM_BYTES", str(256 * 1024)))
+
+# --- Authentication --------------------------------------------------------
+# Optional single-password gate. When COREPORTAL_AUTH_PASSWORD is unset, the
+# app is wide open (its original trusted-network behavior). When set, every
+# page except the login screen, the health probe, and the theme asset requires
+# a valid signed session cookie.
+AUTH_PASSWORD = os.getenv("COREPORTAL_AUTH_PASSWORD", "").strip()
+AUTH_ENABLED = bool(AUTH_PASSWORD)
+
+# Secret used to sign session cookies. If unset we generate an ephemeral one,
+# which means sessions reset on restart (fine for a single instance, but set it
+# explicitly in production so logins survive deploys).
+SECRET_KEY = os.getenv("COREPORTAL_SECRET_KEY", "").strip() or secrets.token_hex(32)
+
+# Session lifetime in seconds (default 7 days).
+SESSION_MAX_AGE = int(os.getenv("COREPORTAL_SESSION_MAX_AGE", str(7 * 24 * 3600)))
+
+SESSION_COOKIE = "coreportal_session"
 
 
 class _TimeoutSession(requests.Session):
@@ -2274,6 +2295,7 @@ def render_home_page(message: str = "") -> str:
         <section class="grid">
             {cards_html}
         </section>
+        {logout_html}
         <footer class="footer">{APP_COPYRIGHT}</footer>
     </div>
 </body>
@@ -4333,10 +4355,155 @@ async def health_check(request):
     return JSONResponse(payload, status_code=200 if db_ok else 503)
 
 
+# --- Authentication helpers ------------------------------------------------
+
+def _sign_session(issued_at: int) -> str:
+    """Return a signed session token of the form '<issued_at>.<hmac>'."""
+    message = f"v1:{issued_at}".encode()
+    signature = hmac.new(SECRET_KEY.encode(), message, hashlib.sha256).hexdigest()
+    return f"{issued_at}.{signature}"
+
+
+def _valid_session(token: str | None) -> bool:
+    """Verify a session cookie's signature and freshness (constant-time)."""
+    if not token or "." not in token:
+        return False
+    issued_str, _, signature = token.partition(".")
+    if not issued_str.isdigit():
+        return False
+    issued_at = int(issued_str)
+    expected = _sign_session(issued_at).split(".", 1)[1]
+    if not hmac.compare_digest(expected, signature):
+        return False
+    return (time_module.time() - issued_at) <= SESSION_MAX_AGE
+
+
+def _is_authenticated(request) -> bool:
+    if not AUTH_ENABLED:
+        return True
+    return _valid_session(request.cookies.get(SESSION_COOKIE))
+
+
+def render_login_page(error: str = "", next_url: str = "") -> str:
+    error_html = f"<p class='login-error'>{html.escape(error)}</p>" if error else ""
+    next_field = (
+        f"<input type='hidden' name='next' value='{html.escape(next_url)}'>" if next_url else ""
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Sign in - {APP_HOME_TITLE}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        {shared_theme_css()}
+        .login-wrap {{ max-width: 360px; margin: 8vh auto; padding: 0 18px; }}
+        .login-card {{ background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+            box-shadow: var(--shadow); padding: 22px; }}
+        .login-card h1 {{ margin: 0 0 4px 0; font-size: 20px; }}
+        .login-card p.sub {{ margin: 0 0 16px 0; color: var(--muted); font-size: 13px; }}
+        .login-error {{ background: #fdecea; border: 1px solid #f5c2c0; color: #b22121;
+            padding: 9px 11px; border-radius: 9px; font-size: 13px; margin: 0 0 12px 0; }}
+    </style>
+</head>
+<body>
+    <div class="login-wrap">
+        <div class="login-card">
+            <h1>{APP_HOME_TITLE}</h1>
+            <p class="sub">Sign in to continue</p>
+            {error_html}
+            <form method="post" action="{with_base_path('/login')}">
+                {next_field}
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" autofocus required>
+                <button type="submit" style="margin-top:10px;">Sign in</button>
+            </form>
+        </div>
+        <footer class="footer">{APP_COPYRIGHT}</footer>
+    </div>
+</body>
+</html>
+"""
+
+
+def _safe_next(raw: str) -> str:
+    """Only allow same-site relative redirects to avoid open-redirect abuse."""
+    if raw and raw.startswith("/") and not raw.startswith("//"):
+        return raw
+    return ROOT_PATH
+
+
+async def login(request):
+    if not AUTH_ENABLED:
+        return RedirectResponse(url=ROOT_PATH, status_code=303)
+
+    if request.method == "GET":
+        if _is_authenticated(request):
+            return RedirectResponse(url=ROOT_PATH, status_code=303)
+        next_url = _safe_next(request.query_params.get("next", ""))
+        return HTMLResponse(render_login_page(next_url=next_url))
+
+    form = await parse_form(request)
+    supplied = form.get("password", "")
+    next_url = _safe_next(form.get("next", ""))
+    if hmac.compare_digest(supplied, AUTH_PASSWORD):
+        token = _sign_session(int(time_module.time()))
+        response = RedirectResponse(url=next_url, status_code=303)
+        response.set_cookie(
+            SESSION_COOKIE, token,
+            max_age=SESSION_MAX_AGE, httponly=True, samesite="strict",
+            secure=request.url.scheme == "https", path="/",
+        )
+        return response
+    logger.warning("Failed login attempt from %s", request.client.host if request.client else "?")
+    return HTMLResponse(render_login_page(error="Incorrect password.", next_url=next_url), status_code=401)
+
+
+async def logout(request):
+    response = RedirectResponse(url=with_base_path("/login"), status_code=303)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
+
+
+# Paths reachable without a session (login screen, health probe, theme asset).
+_AUTH_EXEMPT = {
+    with_base_path("/login"),
+    with_base_path("/healthz"),
+    ASSET_THEME_PATH,
+}
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Attach a conservative set of security headers to every response."""
+    """Single request guard: CSRF same-origin check, optional auth gate, and
+    security response headers.
+
+    These concerns are intentionally combined into one ``BaseHTTPMiddleware``;
+    stacking multiple instances of it can interact badly, so we keep exactly
+    one in the middleware chain.
+    """
 
     async def dispatch(self, request, call_next):
+        path = request.url.path
+
+        # CSRF: state-changing requests must originate from this site. Check
+        # Origin (preferred), falling back to Referer; it must match Host.
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            origin = request.headers.get("origin") or request.headers.get("referer")
+            host = request.headers.get("host", "")
+            if origin:
+                from urllib.parse import urlsplit
+                if urlsplit(origin).netloc != host:
+                    return PlainTextResponse("Cross-origin request blocked", status_code=403)
+
+        # Auth gate (only when a password is configured).
+        if AUTH_ENABLED and path not in _AUTH_EXEMPT and not _is_authenticated(request):
+            if path.startswith(with_base_path("/api")):
+                return JSONResponse({"ok": False, "error": "Authentication required"}, status_code=401)
+            login_url = with_base_path("/login")
+            if path and path != ROOT_PATH:
+                login_url = f"{login_url}?next={request.url.path}"
+            return RedirectResponse(url=login_url, status_code=303)
+
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
@@ -4345,6 +4512,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "Permissions-Policy", "geolocation=(), microphone=(), camera=()"
         )
         return response
+
+
+# Backward-compatible alias: the guard above subsumes the former AuthMiddleware.
+AuthMiddleware = SecurityHeadersMiddleware
 
 
 async def on_internal_error(request, exc):
@@ -4365,9 +4536,17 @@ migrate_legacy_vpm_storage()
 init_db()
 remove_legacy_default_owner_maya()
 
+if AUTH_ENABLED:
+    logger.info("Authentication ENABLED (password gate active)")
+else:
+    logger.info("Authentication disabled (set COREPORTAL_AUTH_PASSWORD to enable)")
+
 app = Starlette(
     debug=False,
-    middleware=[Middleware(SecurityHeadersMiddleware)],
+    middleware=[
+        # One combined guard: CSRF check + auth gate + security headers.
+        Middleware(SecurityHeadersMiddleware),
+    ],
     exception_handlers={
         404: on_not_found,
         500: on_internal_error,
@@ -4375,6 +4554,8 @@ app = Starlette(
     },
     routes=[
         Route(ROOT_PATH, home_page, methods=["GET"]),
+        Route(with_base_path("/login"), login, methods=["GET", "POST"]),
+        Route(with_base_path("/logout"), logout, methods=["GET", "POST"]),
         Route(with_base_path("/healthz"), health_check, methods=["GET"]),
         Route(ASSET_THEME_PATH, coreportal_theme_css, methods=["GET"]),
         Route(OPEN_APP_PATH, open_app, methods=["GET"]),

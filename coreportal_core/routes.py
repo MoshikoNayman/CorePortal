@@ -51,8 +51,14 @@ api_current_quote = source.api_current_quote
 api_historical_quote = source.api_historical_quote
 health_check = source.health_check
 
+# Authentication
+login = source.login
+logout = source.logout
+render_login_page = source.render_login_page
+
 # Middleware + error handlers
 SecurityHeadersMiddleware = source.SecurityHeadersMiddleware
+AuthMiddleware = source.AuthMiddleware
 on_internal_error = source.on_internal_error
 on_not_found = source.on_not_found
 on_form_too_large = source.on_form_too_large
@@ -68,6 +74,7 @@ __all__ = [
     "tenant_add", "owner_delete", "portfolio_add", "cash_add", "trade_add",
     "snapshot_save", "snapshot_load", "defaults_restore", "portfolio_zeroize",
     "api_current_quote", "api_historical_quote", "health_check",
-    "SecurityHeadersMiddleware", "on_internal_error", "on_not_found",
+    "login", "logout", "render_login_page",
+    "SecurityHeadersMiddleware", "AuthMiddleware", "on_internal_error", "on_not_found",
     "on_form_too_large", "FormTooLarge",
 ]
