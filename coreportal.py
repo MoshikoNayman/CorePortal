@@ -2135,6 +2135,30 @@ def monthly_spending_for_month(connection: sqlite3.Connection, tenant_id: int, y
     return to_decimal(row["spent"], MONEY_QUANT)
 
 
+def spending_by_category(connection: sqlite3.Connection, tenant_id: int, year: int, month: int) -> list[tuple[str, Decimal]]:
+    """Return [(category, amount_spent)] for one month, largest first.
+
+    Only counts expenses (negative amounts). Uncategorized entries are grouped
+    under "Uncategorized".
+    """
+    month_start = date(year, month, 1)
+    next_month = shift_months(month_start, 1)
+    rows = connection.execute(
+        """
+        SELECT
+            COALESCE(NULLIF(TRIM(bl.category), ''), 'Uncategorized') AS cat,
+            SUM(-CAST(bl.amount AS REAL)) AS spent
+        FROM bank_ledger bl
+        JOIN bank_accounts ba ON ba.id = bl.account_id
+        WHERE ba.tenant_id=? AND bl.entry_date>=? AND bl.entry_date<? AND CAST(bl.amount AS REAL) < 0
+        GROUP BY cat
+        ORDER BY spent DESC
+        """,
+        (tenant_id, month_start.isoformat(), next_month.isoformat()),
+    ).fetchall()
+    return [(str(r["cat"]), to_decimal(r["spent"], MONEY_QUANT)) for r in rows]
+
+
 def build_monthly_spending_series(connection: sqlite3.Connection, tenant_id: int, months: int = 12) -> list[tuple[str, Decimal]]:
     months = max(1, min(months, 36))
     now = date.today().replace(day=1)
@@ -3639,7 +3663,9 @@ def load_owner_finance_snapshot(
 
     spending_series = build_monthly_spending_series(connection, tenant_id, months=12)
     networth_series = build_networth_estimate_series(connection, tenant_id, months=12)
-    spent_this_month = monthly_spending_for_month(connection, tenant_id, date.today().year, date.today().month)
+    today = date.today()
+    spent_this_month = monthly_spending_for_month(connection, tenant_id, today.year, today.month)
+    category_breakdown = spending_by_category(connection, tenant_id, today.year, today.month)
     net_worth = to_decimal(bank_total + vpm_total, MONEY_QUANT)
 
     return {
@@ -3651,6 +3677,7 @@ def load_owner_finance_snapshot(
         "vpm_total": vpm_total,
         "net_worth": net_worth,
         "spent_this_month": spent_this_month,
+        "category_breakdown": category_breakdown,
         "spending_series": spending_series,
         "networth_series": networth_series,
     }
@@ -3740,6 +3767,32 @@ def render_tracker_page(
         networth_values_json = json.dumps([float(value) for _, value in owner_snapshot["networth_series"]])
         spending_values_json = json.dumps([float(value) for _, value in owner_snapshot["spending_series"]])
 
+        # Spending-by-category breakdown for the current month (bars).
+        category_breakdown = owner_snapshot.get("category_breakdown", [])
+        cat_total = sum((amount for _, amount in category_breakdown), Decimal("0"))
+        if category_breakdown and cat_total > 0:
+            cat_rows = []
+            for cat_name, amount in category_breakdown:
+                pct = float(amount / cat_total * 100) if cat_total else 0.0
+                cat_rows.append(
+                    f"<div class='cat-row'>"
+                    f"<div class='cat-head'><span class='cat-name'>{html.escape(cat_name)}</span>"
+                    f"<span class='cat-amt'>{format_money(amount)} <span class='cat-pct'>({pct:.0f}%)</span></span></div>"
+                    f"<div class='cat-bar'><div class='cat-fill' style='width:{pct:.1f}%'></div></div>"
+                    f"</div>"
+                )
+            category_html = (
+                f"<div class='section-title'><h2>Spending by Category</h2>"
+                f"<span class='muted-note'>This month · {format_money(cat_total)} total</span></div>"
+                + "".join(cat_rows)
+            )
+        else:
+            category_html = (
+                "<h2>Spending by Category</h2>"
+                "<p class='muted-note'>No expenses recorded this month yet. "
+                "Add expense entries with a category to see the breakdown here.</p>"
+            )
+
         flash_html = f"<div class='flash'>{html.escape(message)}</div>" if message else ""
         today_value = date.today().isoformat()
 
@@ -3757,13 +3810,21 @@ def render_tracker_page(
         .glance-controls {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }}
         .glance-graph {{ width:100%; height:200px; border:1px solid var(--line); border-radius:12px; background:var(--card); display:block; }}
         .glance-boxes {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px; }}
-        .glance-box {{ border:1px solid var(--line); border-radius:12px; background:#fff; padding:12px; }}
+        .glance-box {{ border:1px solid var(--line); border-radius:12px; background:var(--card); padding:12px; }}
         .glance-box .k {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }}
         .glance-box .v {{ font-size:20px; font-weight:900; margin-top:4px; }}
         .glance-box .s {{ color:var(--muted); font-size:12.5px; margin-top:2px; }}
         .overview-grid {{ display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px; min-width:0; width:100%; }}
         .overview-grid > * {{ min-width:0; overflow:hidden; }}
         .actions-grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-top:14px; }}
+        /* Spending-by-category bars */
+        .cat-row {{ margin-bottom:10px; }}
+        .cat-head {{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px; margin-bottom:4px; }}
+        .cat-name {{ font-weight:700; }}
+        .cat-amt {{ color:var(--ink); font-weight:700; white-space:nowrap; }}
+        .cat-pct {{ color:var(--muted); font-weight:600; font-size:11.5px; }}
+        .cat-bar {{ height:8px; background:var(--th-bg); border:1px solid var(--line); border-radius:999px; overflow:hidden; }}
+        .cat-fill {{ height:100%; background:linear-gradient(90deg, var(--brand), #6f9bff); border-radius:999px; }}
         @media (max-width: 1080px) {{ .overview-grid {{ grid-template-columns: 1fr; }} }}
     </style>
     {theme_script()}
@@ -3825,6 +3886,10 @@ def render_tracker_page(
                     <div class="s">Spending recorded so far this month</div>
                 </div>
             </div>
+        </section>
+
+        <section class="card" id="category-breakdown" style="margin-bottom:14px;">
+            {category_html}
         </section>
 
         <div class="overview-grid">

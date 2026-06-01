@@ -62,6 +62,7 @@ create_bank_account = source.create_bank_account
 add_bank_entry = source.add_bank_entry
 delete_bank_entry = source.delete_bank_entry
 add_bank_entries = source.add_bank_entries
+spending_by_category = source.spending_by_category
 monthly_spending_for_month = source.monthly_spending_for_month
 build_monthly_spending_series = source.build_monthly_spending_series
 build_networth_estimate_series = source.build_networth_estimate_series
@@ -78,6 +79,6 @@ __all__ = [
     "add_cash_entry", "add_trade", "delete_trade", "delete_cash_entry",
     "load_cash_ledger", "load_trades", "delete_bank_entry",
     "load_bank_accounts", "get_bank_balance", "load_bank_entries", "create_bank_account",
-    "add_bank_entry", "add_bank_entries", "monthly_spending_for_month",
+    "add_bank_entry", "add_bank_entries", "spending_by_category", "monthly_spending_for_month",
     "build_monthly_spending_series", "build_networth_estimate_series",
 ]

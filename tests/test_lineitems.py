@@ -102,5 +102,49 @@ class BankEntryDeleteTests(unittest.TestCase):
             self.assertIsNotNone(c.execute("SELECT id FROM bank_ledger WHERE id=?", (eid,)).fetchone())
 
 
+class CategoryBreakdownTests(unittest.TestCase):
+    MARK = "catbreak-test"
+
+    def setUp(self):
+        with cp.db_connection() as c:
+            self.tenant_id = int(c.execute("SELECT id FROM tenants LIMIT 1").fetchone()["id"])
+            self.account_id = int(c.execute("SELECT id FROM bank_accounts WHERE tenant_id=? LIMIT 1", (self.tenant_id,)).fetchone()["id"])
+
+    def tearDown(self):
+        with cp.db_connection() as c:
+            c.execute("DELETE FROM bank_ledger WHERE note = ?", (self.MARK,))
+
+    def test_groups_and_sorts_expenses(self):
+        import datetime
+        today = datetime.date.today().isoformat()
+        with cp.db_connection() as c:
+            for cat, amt in [("Groceries", "-220"), ("Rent", "-1500"), ("Groceries", "-60"), ("Transport", "-90")]:
+                c.execute(
+                    "INSERT INTO bank_ledger (account_id, amount, entry_date, category, note) VALUES (?,?,?,?,?)",
+                    (self.account_id, amt, today, cat, self.MARK),
+                )
+        d = datetime.date.today()
+        with cp.db_connection() as c:
+            breakdown = cp.spending_by_category(c, self.tenant_id, d.year, d.month)
+        as_dict = {name: amount for name, amount in breakdown}
+        self.assertEqual(as_dict["Rent"], Decimal("1500.00"))
+        self.assertEqual(as_dict["Groceries"], Decimal("280.00"))  # merged 220 + 60
+        # sorted largest first
+        self.assertEqual(breakdown[0][0], "Rent")
+
+    def test_income_is_excluded(self):
+        import datetime
+        today = datetime.date.today().isoformat()
+        with cp.db_connection() as c:
+            c.execute(
+                "INSERT INTO bank_ledger (account_id, amount, entry_date, category, note) VALUES (?,?,?,?,?)",
+                (self.account_id, "5000", today, "Salary", self.MARK),
+            )
+        d = datetime.date.today()
+        with cp.db_connection() as c:
+            breakdown = cp.spending_by_category(c, self.tenant_id, d.year, d.month)
+        self.assertNotIn("Salary", {n for n, _ in breakdown})
+
+
 if __name__ == "__main__":
     unittest.main()
