@@ -215,6 +215,26 @@
       font-weight: 900;
     }
 
+    .subcard {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .subcard h3 { margin: 0 0 8px 0; font-size: 14px; }
+    .subcard-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pay-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .pay-grid label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    .pay-out { margin-top: 10px; font-size: 14px; font-weight: 800; }
+    .pay-out .amt { font-size: 22px; color: var(--brand); }
+    .scenario-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .scenario-actions input { width: auto; flex: 1; min-width: 130px; }
+    .scenario-actions button { width: auto; }
+    #scenarioTable .del-btn { width: auto; background: transparent; border: 1px solid var(--line); color: var(--muted);
+      border-radius: 6px; padding: 1px 8px; font-size: 13px; font-weight: 800; cursor: pointer; }
+    #scenarioTable .del-btn:hover { background: var(--bad, #c4372c); border-color: var(--bad, #c4372c); color: #fff; }
+
+    @media (max-width: 640px) { .pay-grid { grid-template-columns: 1fr; } }
+
     .footer {
       margin-top: 18px;
       padding: 14px 4px 6px 4px;
@@ -342,6 +362,44 @@
         <h2>Estimate</h2>
         <p>Live output for total cost before and after discount.</p>
         <div class="result" id="output"></div>
+
+        <div class="subcard">
+          <h3>Monthly Payment</h3>
+          <div class="pay-grid">
+            <div>
+              <label for="down">Down payment ($)</label>
+              <input type="number" id="down" value="0" min="0" step="100" />
+            </div>
+            <div>
+              <label for="apr">APR (%)</label>
+              <input type="number" id="apr" value="6.9" min="0" step="0.1" />
+            </div>
+            <div>
+              <label for="term">Term (months)</label>
+              <input type="number" id="term" value="60" min="1" step="1" />
+            </div>
+          </div>
+          <div class="pay-out" id="paymentOut"></div>
+        </div>
+
+        <div class="subcard">
+          <div class="subcard-head">
+            <h3>Scenarios</h3>
+            <div class="scenario-actions">
+              <input type="text" id="scenarioName" placeholder="e.g. Dealer A - X5" maxlength="40" />
+              <button type="button" id="saveScenario">Save current</button>
+            </div>
+          </div>
+          <p class="hint" id="scenarioHint">Save the current estimate to compare quotes side by side. Stored in this browser.</p>
+          <div class="table-wrap">
+            <table id="scenarioTable" style="display:none;">
+              <thead>
+                <tr><th>Name</th><th>OTD total</th><th>Monthly</th><th></th></tr>
+              </thead>
+              <tbody id="scenarioBody"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </div>
 
@@ -516,9 +574,89 @@
         output += "<span class='total-line'>💰 Out-the-door total <span class='total-context'>(after " + discountPercent.toFixed(2) + "%&nbsp;discount)</span>:&nbsp;<span class='positive total-value'>" + format(totalAfterDiscount) + "</span></span><br>";
 
         document.getElementById('output').innerHTML = output;
+        window.__otdTotal = totalAfterDiscount;
+        updatePayment();
       } catch (e) {
         document.getElementById('output').innerHTML = 'Error: ' + e.message;
       }
+    }
+
+    // ---- Monthly payment estimator ----
+    function computePayment(principal, aprPct, termMonths) {
+      if (termMonths <= 0) return 0;
+      const r = (aprPct / 100) / 12;
+      if (r === 0) return principal / termMonths;
+      return (principal * r) / (1 - Math.pow(1 + r, -termMonths));
+    }
+
+    function updatePayment() {
+      const total = window.__otdTotal || 0;
+      const down = parseFloat(document.getElementById('down').value) || 0;
+      const apr = parseFloat(document.getElementById('apr').value) || 0;
+      const term = parseInt(document.getElementById('term').value, 10) || 0;
+      const principal = Math.max(total - down, 0);
+      const monthly = computePayment(principal, apr, term);
+      window.__otdMonthly = monthly;
+      const el = document.getElementById('paymentOut');
+      if (term <= 0) { el.innerHTML = 'Enter a term to estimate a payment.'; return; }
+      el.innerHTML = 'Est. monthly: <span class="amt">' + format(monthly) + '</span> '
+        + '<span style="font-weight:600;color:var(--muted);">for ' + term + ' mo'
+        + (apr ? ' at ' + apr.toFixed(2) + '% APR' : '') + '</span>';
+    }
+
+    // ---- Scenario save/compare (localStorage) ----
+    const OTD_SCENARIO_KEY = 'cp-otd-scenarios';
+
+    function loadScenarios() {
+      try { return JSON.parse(localStorage.getItem(OTD_SCENARIO_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+    function persistScenarios(list) {
+      try { localStorage.setItem(OTD_SCENARIO_KEY, JSON.stringify(list)); } catch (e) {}
+    }
+    function renderScenarios() {
+      const list = loadScenarios();
+      const table = document.getElementById('scenarioTable');
+      const body = document.getElementById('scenarioBody');
+      const hint = document.getElementById('scenarioHint');
+      if (!list.length) { table.style.display = 'none'; hint.style.display = ''; return; }
+      hint.style.display = 'none';
+      table.style.display = '';
+      // cheapest OTD total wins a marker
+      const minTotal = Math.min.apply(null, list.map(s => s.total));
+      body.innerHTML = list.map((s, i) => {
+        const best = s.total === minTotal ? ' <span style="color:var(--good);font-weight:800;">★ best</span>' : '';
+        const monthly = s.monthly ? format(s.monthly) : '--';
+        return '<tr><td>' + escapeHtml(s.name) + best + '</td><td>' + format(s.total)
+          + '</td><td>' + monthly + '</td>'
+          + '<td style="text-align:right;"><button type="button" class="del-btn" data-i="' + i + '">&times;</button></td></tr>';
+      }).join('');
+      body.querySelectorAll('.del-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.i, 10);
+          const cur = loadScenarios();
+          cur.splice(idx, 1);
+          persistScenarios(cur);
+          renderScenarios();
+        });
+      });
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function saveCurrentScenario() {
+      const nameInput = document.getElementById('scenarioName');
+      const name = (nameInput.value || '').trim() || ('Scenario ' + (loadScenarios().length + 1));
+      const list = loadScenarios();
+      list.push({
+        name: name,
+        total: window.__otdTotal || 0,
+        monthly: window.__otdMonthly || 0,
+        ts: new Date().toISOString().slice(0, 10),
+      });
+      persistScenarios(list);
+      nameInput.value = '';
+      renderScenarios();
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
@@ -539,8 +677,14 @@
         calculate();
       });
 
+      ['down', 'apr', 'term'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updatePayment);
+      });
+      document.getElementById('saveScenario').addEventListener('click', saveCurrentScenario);
+
       applyYearPolicy(document.getElementById('policy_year').value);
       calculate();
+      renderScenarios();
     });
   </script>
 </body>
