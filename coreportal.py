@@ -347,6 +347,13 @@ def shared_theme_css() -> str:
         .gain { color: var(--gain); font-weight: 800; }
         .loss { color: var(--loss); font-weight: 800; }
 
+        /* Inline delete buttons on line-item rows */
+        .inline-del { display: inline; margin: 0; }
+        .del-btn { width: auto; background: transparent; border: 1px solid var(--line); color: var(--muted);
+          border-radius: 6px; padding: 1px 7px; font-size: 13px; font-weight: 800; line-height: 1.3; cursor: pointer; }
+        .del-btn:hover { background: var(--loss); border-color: var(--loss); color: #fff; }
+        td.row-actions { text-align: right; white-space: nowrap; width: 1%; }
+
         iframe { max-width: 100%; }
         .footer { margin-top: 16px; padding: 12px 4px 6px 4px; text-align: center; color: var(--muted); font-size: 12px; }
 
@@ -387,6 +394,25 @@ def shared_nav(active: str = "") -> str:
         f'<button class="theme-toggle" type="button" onclick="cpToggleTheme()" '
         f'title="Toggle light/dark" aria-label="Toggle theme">&#9681;</button>'
         f'</nav>'
+    )
+
+
+def delete_button(action: str, fields: dict[str, Any], confirm: str = "Delete this entry?") -> str:
+    """Render a small inline delete form (POST) with hidden context fields.
+
+    Used for removing individual line items (trades, cash entries, ledger rows).
+    Same-origin POST, so it satisfies the CSRF guard. ``action`` is a base-path
+    aware URL.
+    """
+    hidden = "".join(
+        f'<input type="hidden" name="{html.escape(str(k))}" value="{html.escape(str(v))}">'
+        for k, v in fields.items()
+    )
+    safe_confirm = html.escape(confirm).replace("'", "&#39;")
+    return (
+        f'<form method="post" action="{action}" class="inline-del" '
+        f'onsubmit="return confirm(\'{safe_confirm}\')">{hidden}'
+        f'<button type="submit" class="del-btn" title="Delete">&times;</button></form>'
     )
 
 
@@ -1872,6 +1898,26 @@ def add_trade(
     return True, "Trade recorded"
 
 
+def delete_trade(portfolio_id: int, trade_id: int) -> bool:
+    """Delete a single trade from a portfolio. Returns True if a row was removed."""
+    with db_connection() as connection:
+        cur = connection.execute(
+            "DELETE FROM trades WHERE id=? AND portfolio_id=?",
+            (trade_id, portfolio_id),
+        )
+        return cur.rowcount > 0
+
+
+def delete_cash_entry(portfolio_id: int, entry_id: int) -> bool:
+    """Delete a single cash-ledger entry from a portfolio."""
+    with db_connection() as connection:
+        cur = connection.execute(
+            "DELETE FROM cash_ledger WHERE id=? AND portfolio_id=?",
+            (entry_id, portfolio_id),
+        )
+        return cur.rowcount > 0
+
+
 def load_cash_ledger(connection: sqlite3.Connection, portfolio_id: int) -> list[sqlite3.Row]:
     return connection.execute(
         """
@@ -2048,6 +2094,16 @@ def add_bank_entry(account_id: int, amount: Decimal, entry_date: str, category: 
             "INSERT INTO bank_ledger (account_id, amount, entry_date, category, note) VALUES (?, ?, ?, ?, ?)",
             (account_id, str(amount), entry_date, category.strip()[:80], note.strip()[:250]),
         )
+
+
+def delete_bank_entry(account_id: int, entry_id: int) -> bool:
+    """Delete a single bank-ledger entry from an account."""
+    with db_connection() as connection:
+        cur = connection.execute(
+            "DELETE FROM bank_ledger WHERE id=? AND account_id=?",
+            (entry_id, account_id),
+        )
+        return cur.rowcount > 0
 
 
 def add_bank_entries(account_id: int, entries: list[tuple[Decimal, str, str, str]]) -> int:
@@ -2446,6 +2502,11 @@ def render_dashboard(
     if trade_rows:
         for row in trade_rows:
             row_side = str(row["side"]).upper()
+            del_html = delete_button(
+                with_base_path("/trade/delete"),
+                {"tenant_id": current_tenant_id, "portfolio_id": current_portfolio_id, "trade_id": int(row["id"])},
+                confirm=f"Delete this {row_side} {html.escape(row['symbol'])} trade?",
+            )
             trade_rows_html += f"""
             <tr>
               <td>{html.escape(row_side)}</td>
@@ -2453,24 +2514,31 @@ def render_dashboard(
               <td>{format_shares(to_decimal(row['quantity'], SHARE_QUANT))}</td>
               <td>{format_money(to_decimal(row['price'], MONEY_QUANT))}</td>
               <td>{html.escape(row['trade_date'])}</td>
+              <td class="row-actions">{del_html}</td>
             </tr>
             """
     else:
-        trade_rows_html = "<tr><td colspan='5'>No orders yet for this portfolio.</td></tr>"
+        trade_rows_html = "<tr><td colspan='6'>No orders yet for this portfolio.</td></tr>"
 
     cash_rows_html = ""
     if cash_rows:
         for row in cash_rows:
             note = row["note"] or "-"
+            del_html = delete_button(
+                with_base_path("/cash/delete"),
+                {"tenant_id": current_tenant_id, "portfolio_id": current_portfolio_id, "entry_id": int(row["id"])},
+                confirm="Delete this cash entry?",
+            )
             cash_rows_html += f"""
             <tr>
               <td>{format_money(to_decimal(row['amount'], MONEY_QUANT))}</td>
               <td>{html.escape(row['entry_date'])}</td>
               <td>{html.escape(note)}</td>
+              <td class="row-actions">{del_html}</td>
             </tr>
             """
     else:
-        cash_rows_html = "<tr><td colspan='3'>No funding entries yet for this portfolio.</td></tr>"
+        cash_rows_html = "<tr><td colspan='4'>No funding entries yet for this portfolio.</td></tr>"
 
     flash_html = ""
     if message:
@@ -2723,7 +2791,7 @@ def render_dashboard(
           <div class="table-wrap">
             <table>
               <thead>
-                                <tr><th>Side</th><th>Symbol</th><th>Qty</th><th>Price</th><th>Date</th></tr>
+                                <tr><th>Side</th><th>Symbol</th><th>Qty</th><th>Price</th><th>Date</th><th></th></tr>
               </thead>
                             <tbody>{trade_rows_html}</tbody>
             </table>
@@ -2737,7 +2805,7 @@ def render_dashboard(
           <div class="table-wrap">
             <table>
               <thead>
-                                <tr><th>Amount</th><th>Date</th><th>Note</th></tr>
+                                <tr><th>Amount</th><th>Date</th><th>Note</th><th></th></tr>
               </thead>
                             <tbody>{cash_rows_html}</tbody>
             </table>
@@ -3641,16 +3709,22 @@ def render_tracker_page(
                 for row in entries:
                         amount = to_decimal(row["amount"], MONEY_QUANT)
                         amount_class = "gain" if amount >= 0 else "loss"
+                        del_html = delete_button(
+                                f"{TRACKER_PATH}/entry/delete",
+                                {"tenant_id": current_tenant_id, "account_id": current_account_id, "entry_id": int(row["id"])},
+                                confirm="Delete this ledger entry?",
+                        )
                         entry_rows_html += f"""
                         <tr>
                             <td class=\"{amount_class}\">{format_money(amount)}</td>
                             <td>{html.escape(row['entry_date'])}</td>
                             <td>{html.escape(str(row['category'] or '-'))}</td>
                             <td>{html.escape(str(row['note'] or '-'))}</td>
+                            <td class="row-actions">{del_html}</td>
                         </tr>
                         """
         else:
-                entry_rows_html = "<tr><td colspan='4'>No tracker entries yet for this account.</td></tr>"
+                entry_rows_html = "<tr><td colspan='5'>No tracker entries yet for this account.</td></tr>"
 
         account_rows_html = "".join(
             f"<tr><td>{html.escape(name)}</td><td>{html.escape(account_type)}</td><td>{format_money(balance)}</td></tr>"
@@ -3816,6 +3890,7 @@ def render_tracker_page(
                                     <th>Date</th>
                                     <th>Category</th>
                                     <th>Note</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -4056,6 +4131,20 @@ async def tracker_entry_add(request):
         signed_amount = amount if entry_type == "income" else -amount
         add_bank_entry(account_id, signed_amount, entry_date, category, note)
         return redirect_tracker("Entry saved", tenant_id=tenant_id, account_id=account_id)
+
+
+async def tracker_entry_delete(request):
+        form = await parse_form(request)
+        tenant_id = parse_optional_int(form.get("tenant_id"))
+        account_id = parse_optional_int(form.get("account_id"))
+        entry_id = parse_optional_int(form.get("entry_id"))
+
+        if account_id is None or entry_id is None:
+                return redirect_tracker("Delete failed: missing entry reference", tenant_id=tenant_id, account_id=account_id)
+
+        ok = delete_bank_entry(account_id, entry_id)
+        message = "Entry deleted" if ok else "Entry not found"
+        return redirect_tracker(message, tenant_id=tenant_id, account_id=account_id)
 
 
 async def tracker_deposit(request):
@@ -4327,6 +4416,34 @@ async def trade_add(request):
         return redirect_with_message(f"Trade rejected: {message}", tenant_id=tenant_id, portfolio_id=portfolio_id)
 
     return redirect_with_message(f"{side.upper()} order recorded", tenant_id=tenant_id, portfolio_id=portfolio_id)
+
+
+async def trade_delete(request):
+    form = await parse_form(request)
+    tenant_id = parse_optional_int(form.get("tenant_id"))
+    portfolio_id = parse_optional_int(form.get("portfolio_id"))
+    trade_id = parse_optional_int(form.get("trade_id"))
+
+    if portfolio_id is None or trade_id is None:
+        return redirect_with_message("Delete failed: missing trade reference", tenant_id=tenant_id, portfolio_id=portfolio_id)
+
+    ok = delete_trade(portfolio_id, trade_id)
+    message = "Trade deleted" if ok else "Trade not found"
+    return redirect_with_message(message, tenant_id=tenant_id, portfolio_id=portfolio_id)
+
+
+async def cash_delete(request):
+    form = await parse_form(request)
+    tenant_id = parse_optional_int(form.get("tenant_id"))
+    portfolio_id = parse_optional_int(form.get("portfolio_id"))
+    entry_id = parse_optional_int(form.get("entry_id"))
+
+    if portfolio_id is None or entry_id is None:
+        return redirect_with_message("Delete failed: missing entry reference", tenant_id=tenant_id, portfolio_id=portfolio_id)
+
+    ok = delete_cash_entry(portfolio_id, entry_id)
+    message = "Cash entry deleted" if ok else "Cash entry not found"
+    return redirect_with_message(message, tenant_id=tenant_id, portfolio_id=portfolio_id)
 
 
 async def snapshot_save(request):
@@ -4656,6 +4773,7 @@ app = Starlette(
         Route(f"{TRACKER_PATH}/salary/add", tracker_salary_add, methods=["POST"]),
         Route(f"{TRACKER_PATH}/spending/add", tracker_spending_add, methods=["POST"]),
         Route(f"{TRACKER_PATH}/entry/add", tracker_entry_add, methods=["POST"]),
+        Route(f"{TRACKER_PATH}/entry/delete", tracker_entry_delete, methods=["POST"]),
         Route(f"{TRACKER_PATH}/transfer-to-vpm", tracker_transfer_to_vpm, methods=["POST"]),
         Route(f"{TRACKER_PATH}/zeroize", tracker_zeroize, methods=["POST"]),
         Route(OTD_PATH, otd_tool, methods=["GET"]),
@@ -4678,7 +4796,9 @@ app = Starlette(
         Route(f"{VPM_PATH}/add", portfolio_add, methods=["POST"]),
         Route(with_base_path("/portfolio/add"), portfolio_add, methods=["POST"]),
         Route(with_base_path("/cash/add"), cash_add, methods=["POST"]),
+        Route(with_base_path("/cash/delete"), cash_delete, methods=["POST"]),
         Route(with_base_path("/trade/add"), trade_add, methods=["POST"]),
+        Route(with_base_path("/trade/delete"), trade_delete, methods=["POST"]),
         Route(with_base_path("/api/quote/current"), api_current_quote, methods=["GET"]),
         Route(with_base_path("/api/quote/historical"), api_historical_quote, methods=["GET"]),
     ],

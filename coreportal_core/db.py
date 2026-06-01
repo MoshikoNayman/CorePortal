@@ -49,6 +49,8 @@ get_cash_balance = source.get_cash_balance
 get_open_quantity = source.get_open_quantity
 add_cash_entry = source.add_cash_entry
 add_trade = source.add_trade
+delete_trade = source.delete_trade
+delete_cash_entry = source.delete_cash_entry
 load_cash_ledger = source.load_cash_ledger
 load_trades = source.load_trades
 
@@ -58,6 +60,7 @@ get_bank_balance = source.get_bank_balance
 load_bank_entries = source.load_bank_entries
 create_bank_account = source.create_bank_account
 add_bank_entry = source.add_bank_entry
+delete_bank_entry = source.delete_bank_entry
 add_bank_entries = source.add_bank_entries
 monthly_spending_for_month = source.monthly_spending_for_month
 build_monthly_spending_series = source.build_monthly_spending_series
@@ -72,7 +75,8 @@ __all__ = [
     "load_tenants", "load_portfolios", "resolve_selection", "create_tenant",
     "create_portfolio", "delete_owner", "remove_legacy_default_owner_maya",
     "get_cash_added", "get_trade_totals", "get_cash_balance", "get_open_quantity",
-    "add_cash_entry", "add_trade", "load_cash_ledger", "load_trades",
+    "add_cash_entry", "add_trade", "delete_trade", "delete_cash_entry",
+    "load_cash_ledger", "load_trades", "delete_bank_entry",
     "load_bank_accounts", "get_bank_balance", "load_bank_entries", "create_bank_account",
     "add_bank_entry", "add_bank_entries", "monthly_spending_for_month",
     "build_monthly_spending_series", "build_networth_estimate_series",

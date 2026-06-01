@@ -36,11 +36,14 @@ tracker_salary_add = source.tracker_salary_add
 tracker_spending_add = source.tracker_spending_add
 tracker_transfer_to_vpm = source.tracker_transfer_to_vpm
 tracker_zeroize = source.tracker_zeroize
+tracker_entry_delete = source.tracker_entry_delete
 tenant_add = source.tenant_add
 owner_delete = source.owner_delete
 portfolio_add = source.portfolio_add
 cash_add = source.cash_add
+cash_delete = source.cash_delete
 trade_add = source.trade_add
+trade_delete = source.trade_delete
 snapshot_save = source.snapshot_save
 snapshot_load = source.snapshot_load
 defaults_restore = source.defaults_restore
@@ -70,8 +73,9 @@ __all__ = [
     "otd_tool", "cvp_tool", "coreportal_theme_css", "otd_policy_years", "cvp_policy_years",
     "legacy_vpm_redirect", "legacy_otd_redirect", "legacy_tracker_redirect",
     "tracker_account_add", "tracker_entry_add", "tracker_deposit", "tracker_salary_add",
-    "tracker_spending_add", "tracker_transfer_to_vpm", "tracker_zeroize",
-    "tenant_add", "owner_delete", "portfolio_add", "cash_add", "trade_add",
+    "tracker_spending_add", "tracker_transfer_to_vpm", "tracker_zeroize", "tracker_entry_delete",
+    "tenant_add", "owner_delete", "portfolio_add", "cash_add", "cash_delete",
+    "trade_add", "trade_delete",
     "snapshot_save", "snapshot_load", "defaults_restore", "portfolio_zeroize",
     "api_current_quote", "api_historical_quote", "health_check",
     "login", "logout", "render_login_page",
