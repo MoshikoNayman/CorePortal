@@ -30,13 +30,42 @@
       --c2: #ef6a00;
       --c3: #0e9663;
       --c4: #a136c8;
+      --input-bg: #ffffff;
     }
+    html[data-theme="dark"] {
+      --bg: #0e1626;
+      --card: #15203a;
+      --ink: #e7ecf5;
+      --muted: #9fb0cb;
+      --line: #27334d;
+      --calc-bg: #122a3f;
+      --calc-line: #2f6d96;
+      --view-bg: #111c33;
+      --view-line: #2b3a57;
+      --auto-bg: #123524;
+      --auto-line: #2f7a4c;
+      --brand: #5b8cff;
+      --brand-strong: #88adff;
+      --input-bg: #0f1a30;
+      --shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Persistent top navigation */
+    .topnav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 14px;
+      background: var(--card); border-bottom: 1px solid var(--line); padding: 9px 18px; }
+    .topnav .brand { font-weight: 900; font-size: 15px; color: var(--brand); text-decoration: none; white-space: nowrap; }
+    .topnav-links { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+    .topnav-links a { text-decoration: none; color: var(--muted); font-weight: 700; font-size: 13px; padding: 6px 11px; border-radius: 8px; white-space: nowrap; }
+    .topnav-links a:hover { background: var(--view-bg); color: var(--brand); }
+    .topnav-links a.active { background: var(--brand); color: #fff; }
+    .theme-toggle { width: auto; background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 14px; font-weight: 700; line-height: 1; }
+    .theme-toggle:hover { background: var(--view-bg); }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: radial-gradient(circle at 0% 0%, #f8fbff 0%, var(--bg) 56%);
+      background: var(--bg);
       color: var(--ink);
       font-family: var(--font-ui);
     }
@@ -136,7 +165,7 @@
 
     .btn {
       border: 1px solid var(--line);
-      background: #f7faff;
+      background: var(--view-bg);
       color: var(--ink);
       border-radius: 10px;
       font-size: 12px;
@@ -161,7 +190,7 @@
 
     .field {
       border: 1px solid var(--line);
-      background: #fbfdff;
+      background: var(--input-bg);
       border-radius: 12px;
       padding: 10px;
     }
@@ -185,8 +214,8 @@
     }
 
     .readonly-input {
-      background: #f3f5fa;
-      color: #4d5e79;
+      background: var(--view-bg);
+      color: var(--muted);
     }
 
     .field.wide { grid-column: 1 / -1; }
@@ -213,7 +242,7 @@
       font-size: 14px;
       padding: 9px 10px;
       color: var(--ink);
-      background: #fff;
+      background: var(--card);
     }
 
     input:focus, select:focus {
@@ -232,7 +261,7 @@
     .tile {
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: var(--card);
       padding: 11px;
     }
 
@@ -271,7 +300,7 @@
       border-bottom: 1px solid var(--line);
       position: sticky;
       top: 0;
-      background: #f8fbff;
+      background: var(--card);
       z-index: 1;
     }
 
@@ -292,7 +321,7 @@
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: var(--card);
     }
 
     .mini-note {
@@ -318,8 +347,8 @@
       border: 1px solid #c6d2e4;
       font-size: 11px;
       font-weight: 700;
-      color: #42536f;
-      background: #f9fbfe;
+      color: var(--muted);
+      background: var(--view-bg);
     }
 
     .swatch {
@@ -340,7 +369,7 @@
     .year-card {
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: var(--card);
       padding: 10px;
     }
 
@@ -364,7 +393,7 @@
       height: 350px;
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: var(--card);
     }
 
     .legend {
@@ -383,7 +412,7 @@
       border: 1px solid var(--line);
       border-radius: 999px;
       padding: 5px 9px;
-      background: #fff;
+      background: var(--card);
     }
 
     .dot {
@@ -397,7 +426,7 @@
       margin-top: 12px;
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #fff;
+      background: var(--card);
       padding: 12px;
       font-family: var(--font-mono);
       font-size: 12px;
@@ -425,8 +454,21 @@
       canvas { height: 260px; }
     }
   </style>
+  <script>(function(){try{var t=localStorage.getItem('cp-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+  function cpToggleTheme(){var d=document.documentElement;var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('cp-theme',n);}catch(e){}}</script>
 </head>
 <body>
+  <nav class="topnav">
+    <a class="brand" href=".">CorePortal</a>
+    <div class="topnav-links">
+      <a href=".">Home</a>
+      <a href="VPM">VPM</a>
+      <a href="BAT">BAT</a>
+      <a href="OTD">OTD</a>
+      <a href="CVP" class="active">CVP</a>
+    </div>
+    <button class="theme-toggle" type="button" onclick="cpToggleTheme()" title="Toggle light/dark" aria-label="Toggle theme">&#9681;</button>
+  </nav>
   <div class="page">
     <section class="hero">
       <h1>CVP · Car Value Planner</h1>
@@ -920,8 +962,12 @@
       const p = { left: 62, right: 18, top: 20, bottom: 44 };
 
       ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim() || '#ffffff';
       ctx.fillRect(0, 0, w, h);
+
+      const _rs = getComputedStyle(document.documentElement);
+      const gridColor = _rs.getPropertyValue('--line').trim() || '#e1e8f5';
+      const axisText = _rs.getPropertyValue('--muted').trim() || '#5f7292';
 
       const allValues = [];
       scenarios.forEach((s) => HORIZONS.forEach((y) => allValues.push(s.horizonTco[y])));
@@ -939,7 +985,7 @@
         return p.top + ((maxVal - value) / range) * (h - p.top - p.bottom);
       }
 
-      ctx.strokeStyle = '#e1e8f5';
+      ctx.strokeStyle = gridColor;
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i += 1) {
         const y = p.top + i * ((h - p.top - p.bottom) / 4);
@@ -949,7 +995,7 @@
         ctx.stroke();
       }
 
-      ctx.fillStyle = '#5f7292';
+      ctx.fillStyle = axisText;
       ctx.font = '11px sans-serif';
       for (let i = 0; i <= 4; i += 1) {
         const v = maxVal - i * (range / 4);
@@ -959,13 +1005,13 @@
 
       HORIZONS.forEach((year) => {
         const x = xFor(year);
-        ctx.strokeStyle = '#d8e2f1';
+        ctx.strokeStyle = gridColor;
         ctx.beginPath();
         ctx.moveTo(x, p.top);
         ctx.lineTo(x, h - p.bottom);
         ctx.stroke();
 
-        ctx.fillStyle = '#3f5579';
+        ctx.fillStyle = axisText;
         ctx.fillText(year + 'y', x - 10, h - 16);
       });
 

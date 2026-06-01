@@ -262,10 +262,39 @@ def shared_theme_css() -> str:
           --brand-soft: #edf2ff;
           --gain: #0b7d23;
           --loss: #b22121;
+          --input-bg: #ffffff;
+          --th-bg: #fbfcff;
+          --pill-bg: #f5f7fc;
           --shadow: 0 8px 22px rgba(20, 42, 90, 0.07);
         }
+        html[data-theme="dark"] {
+          --bg: #0e1626;
+          --card: #15203a;
+          --ink: #e7ecf5;
+          --muted: #9fb0cb;
+          --line: #27334d;
+          --brand: #5b8cff;
+          --brand-soft: #1b2942;
+          --gain: #3ddc84;
+          --loss: #ff6b6b;
+          --input-bg: #0f1a30;
+          --th-bg: #111c33;
+          --pill-bg: #1b2942;
+          --shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+        }
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); font-size: 14px; }
+        body { margin: 0; font-family: var(--font-ui); background: var(--bg); color: var(--ink); font-size: 14px; transition: background 0.2s, color 0.2s; }
+
+        /* Top navigation (persistent across tools) */
+        .topnav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 14px;
+          background: var(--card); border-bottom: 1px solid var(--line); padding: 9px 18px; }
+        .topnav .brand { font-weight: 900; font-size: 15px; color: var(--brand); text-decoration: none; letter-spacing: 0.2px; white-space: nowrap; }
+        .topnav-links { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+        .topnav-links a { text-decoration: none; color: var(--muted); font-weight: 700; font-size: 13px; padding: 6px 11px; border-radius: 8px; white-space: nowrap; }
+        .topnav-links a:hover { background: var(--brand-soft); color: var(--brand); }
+        .topnav-links a.active { background: var(--brand); color: #fff; }
+        .theme-toggle { width: auto; background: transparent; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 14px; font-weight: 700; line-height: 1; }
+        .theme-toggle:hover { background: var(--brand-soft); }
 
         /* Page shell */
         .page, .wrap { max-width: __MAXW__px; width: 100%; margin: 0 auto; padding: 18px; box-sizing: border-box; overflow: hidden; }
@@ -301,20 +330,20 @@ def shared_theme_css() -> str:
         form { display: grid; gap: 8px; }
         label { font-weight: 700; font-size: 12.5px; color: var(--ink); }
         input, select, button { width: 100%; border-radius: 9px; border: 1px solid var(--line); padding: 8px 10px; font-size: 13px; }
-        input, select { background: #fff; color: var(--ink); }
+        input, select { background: var(--input-bg); color: var(--ink); }
         button { background: var(--brand); color: #fff; font-weight: 800; cursor: pointer; border: 0; }
-        button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+        button.secondary { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
 
         /* Pills */
         .portfolio-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-        .portfolio-pill { text-decoration: none; color: var(--ink); background: #f5f7fc; border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: 12.5px; }
+        .portfolio-pill { text-decoration: none; color: var(--ink); background: var(--pill-bg); border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: 12.5px; }
         .portfolio-pill.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 
         /* Tables */
         .table-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #eef2f8; padding: 7px 8px; text-align: left; font-size: 13px; white-space: nowrap; }
-        th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: #fbfcff; }
+        th, td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; font-size: 13px; white-space: nowrap; }
+        th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; background: var(--th-bg); }
         .gain { color: var(--gain); font-weight: 800; }
         .loss { color: var(--loss); font-weight: 800; }
 
@@ -331,6 +360,48 @@ def shared_theme_css() -> str:
         }
     """
     return css.replace("__THEME__", ASSET_THEME_PATH).replace("__MAXW__", str(COMMON_PAGE_MAX_WIDTH))
+
+
+def shared_nav(active: str = "") -> str:
+    """Persistent top navigation shown on every page.
+
+    ``active`` is one of: home, vpm, bat, otd, cvp - used to highlight the
+    current tool. Links use base-path-aware URLs so it works behind the proxy.
+    """
+    items = [
+        ("home", "Home", ROOT_PATH),
+        ("vpm", "VPM", VPM_PATH),
+        ("bat", "BAT", TRACKER_PATH),
+        ("otd", "OTD", OTD_PATH),
+        ("cvp", "CVP", CVP_PATH),
+    ]
+    links = "".join(
+        f'<a href="{href}"{" class=\"active\"" if key == active else ""}>{label}</a>'
+        for key, label, href in items
+    )
+    return (
+        f'<nav class="topnav">'
+        f'<a class="brand" href="{ROOT_PATH}">CorePortal</a>'
+        f'<div class="topnav-links">{links}</div>'
+        f'<button class="theme-toggle" type="button" onclick="cpToggleTheme()" '
+        f'title="Toggle light/dark" aria-label="Toggle theme">&#9681;</button>'
+        f'</nav>'
+    )
+
+
+def theme_script() -> str:
+    """Inline JS: apply the saved theme early and toggle it on demand.
+
+    Kept tiny and dependency-free; persists choice in localStorage so it holds
+    across every tool/page.
+    """
+    return (
+        "<script>(function(){try{var t=localStorage.getItem('cp-theme');"
+        "if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();"
+        "function cpToggleTheme(){var d=document.documentElement;"
+        "var n=d.getAttribute('data-theme')==='dark'?'light':'dark';"
+        "d.setAttribute('data-theme',n);try{localStorage.setItem('cp-theme',n);}catch(e){}}</script>"
+    )
 
 
 def ensure_vpm_storage_layout() -> None:
@@ -2286,8 +2357,10 @@ def render_home_page(message: str = "") -> str:
         .card-disabled {{ opacity:0.72; }}
         .badge {{ display:inline-block; margin-bottom:8px; font-size:11px; color:#4b5771; border:1px solid var(--line); background:#f6f8fd; border-radius:999px; padding:3px 9px; font-weight:700; }}
     </style>
+    {theme_script()}
 </head>
 <body>
+    {shared_nav("home")}
     <div class="page">
         <section class="hero">
             <h1>{APP_HOME_TITLE}</h1>
@@ -2445,8 +2518,10 @@ def render_dashboard(
     .button-row button {{ flex: 1 1 160px; }}
     .muted-note {{ color: var(--muted); font-size: 13px; line-height: 1.45; }}
   </style>
+  {theme_script()}
 </head>
 <body>
+  {shared_nav("vpm")}
   <div class="page">
     <section class="hero">
       <h1>{APP_TITLE}</h1>
@@ -2944,6 +3019,7 @@ def render_analysis_page(
         .chart-pill {{ font-size:12px; border:1px solid #d9e1ee; background:white; color:#233256; border-radius:999px; padding:5px 10px; }}
         .chart-muted {{ font-size:12px; color:#5f6b85; margin-top:8px; }}
     </style>
+    {theme_script()}
 </head>
 <body>
     <div class="wrap">
@@ -3604,7 +3680,7 @@ def render_tracker_page(
         /* Tracker specifics */
         .glance {{ margin-bottom:14px; }}
         .glance-controls {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }}
-        .glance-graph {{ width:100%; height:200px; border:1px solid var(--line); border-radius:12px; background:#fff; display:block; }}
+        .glance-graph {{ width:100%; height:200px; border:1px solid var(--line); border-radius:12px; background:var(--card); display:block; }}
         .glance-boxes {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px; }}
         .glance-box {{ border:1px solid var(--line); border-radius:12px; background:#fff; padding:12px; }}
         .glance-box .k {{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; }}
@@ -3615,8 +3691,10 @@ def render_tracker_page(
         .actions-grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-top:14px; }}
         @media (max-width: 1080px) {{ .overview-grid {{ grid-template-columns: 1fr; }} }}
     </style>
+    {theme_script()}
 </head>
 <body>
+    {shared_nav("bat")}
     <div class=\"page\">
         <section class=\"hero\">
             <h1>BAT · Bank Account Tracker</h1>
@@ -3884,6 +3962,10 @@ def render_tracker_page(
         const svg = document.getElementById('glance-graph');
 
         function drawSeries(values, color) {{
+            const _rs = getComputedStyle(document.documentElement);
+            const bgColor = (_rs.getPropertyValue('--card').trim()) || '#ffffff';
+            const lineColor = (_rs.getPropertyValue('--line').trim()) || '#d9e1ee';
+            const labelColor = (_rs.getPropertyValue('--muted').trim()) || '#5f6b85';
             const width = 960;
             const height = 220;
             const padX = 36;
@@ -3903,12 +3985,12 @@ def render_tracker_page(
             const labelText = chartLabels.map((label, index) => {{
                 if (index % 3 !== 0 && index !== chartLabels.length - 1) return '';
                 const x = padX + (chartW * index) / Math.max(chartLabels.length - 1, 1);
-                return `<text x="${{x.toFixed(1)}}" y="208" fill="#5f6b85" font-size="11" text-anchor="middle">${{label}}</text>`;
+                return `<text x="${{x.toFixed(1)}}" y="208" fill="${{labelColor}}" font-size="11" text-anchor="middle">${{label}}</text>`;
             }}).join('');
 
             svg.innerHTML = `
-                <rect x="0" y="0" width="960" height="220" fill="#ffffff"/>
-                <line x1="36" y1="196" x2="924" y2="196" stroke="#d9e1ee" stroke-width="1"/>
+                <rect x="0" y="0" width="960" height="220" fill="${{bgColor}}"/>
+                <line x1="36" y1="196" x2="924" y2="196" stroke="${{lineColor}}" stroke-width="1"/>
                 <polyline points="${{points}}" fill="none" stroke="${{color}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 ${{labelText}}
             `;
