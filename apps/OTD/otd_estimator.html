@@ -29,29 +29,31 @@
     }
 
     .page {
-      max-width: 1240px;
+      max-width: 1080px;
+      width: 100%;
       margin: 0 auto;
-      padding: 24px;
+      padding: 18px;
+      box-sizing: border-box;
     }
 
     .hero {
       background: linear-gradient(135deg, #13203c, #2952ff);
       color: white;
-      padding: 24px;
-      border-radius: 20px;
+      padding: 18px 20px;
+      border-radius: 16px;
       box-shadow: var(--shadow);
     }
 
     .hero h1 {
-      margin: 0 0 8px 0;
-      font-size: 34px;
+      margin: 0 0 6px 0;
+      font-size: 24px;
     }
 
     .hero p {
       margin: 0;
       max-width: 920px;
-      color: rgba(255,255,255,0.86);
-      line-height: 1.5;
+      color: rgba(255,255,255,0.88);
+      line-height: 1.45;
     }
 
     .hero-meta {
@@ -84,15 +86,15 @@
 
     .card {
       background: var(--card);
-      border-radius: 18px;
+      border-radius: 14px;
       box-shadow: var(--shadow);
       border: 1px solid rgba(217, 225, 238, 0.75);
-      padding: 18px;
+      padding: 14px;
     }
 
     .card h2 {
       margin: 0 0 8px 0;
-      font-size: 21px;
+      font-size: 16px;
     }
 
     .card p {
@@ -197,9 +199,9 @@
     }
 
     @media (max-width: 900px) {
-      .page { padding: 14px; }
+      .page { padding: 12px; }
       .layout { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 28px; }
+      .hero h1 { font-size: 21px; }
     }
   </style>
 </head>

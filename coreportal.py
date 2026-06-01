@@ -2923,9 +2923,9 @@ def render_analysis_page(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         {shared_theme_css()}
-        /* Analysis page specifics */
-        .top {{ background: linear-gradient(135deg, #13203c, #2952ff); color:white; border-radius:16px; padding:18px; }}
-        .top h1 {{ margin:0 0 6px 0; font-size:22px; }}
+        /* Analysis page specifics (banner matches the .hero used elsewhere) */
+        .top {{ background: linear-gradient(135deg, #13203c, #2952ff); color:white; border-radius:16px; padding:18px 20px; box-shadow: var(--shadow); }}
+        .top h1 {{ margin:0 0 6px 0; font-size:24px; }}
         .top p {{ margin:0; opacity:0.9; }}
         .actions {{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }}
         .btn {{ text-decoration:none; color:white; background:#2952ff; border-radius:9px; padding:8px 12px; font-weight:700; }}

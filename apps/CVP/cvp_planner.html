@@ -42,20 +42,22 @@
     }
 
     .page {
-      max-width: 1240px;
+      max-width: 1080px;
+      width: 100%;
       margin: 0 auto;
-      padding: 24px;
+      padding: 18px;
+      box-sizing: border-box;
     }
 
     .hero {
       background: linear-gradient(130deg, #132447 0%, #1158d5 55%, #0a73d2 100%);
       color: #fff;
-      border-radius: 22px;
-      padding: 24px;
+      border-radius: 16px;
+      padding: 18px 20px;
       box-shadow: var(--shadow);
     }
 
-    .hero h1 { margin: 0 0 8px 0; font-size: 34px; }
+    .hero h1 { margin: 0 0 6px 0; font-size: 24px; }
     .hero .byline { margin: 0; font-size: 14px; opacity: 0.95; }
     .hero .sub { margin-top: 8px; font-size: 15px; opacity: 0.95; max-width: 920px; line-height: 1.5; }
 
@@ -95,14 +97,14 @@
     .card {
       background: var(--card);
       border: 1px solid rgba(210, 220, 235, 0.95);
-      border-radius: 16px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 14px;
       box-shadow: var(--shadow);
     }
 
     .card h2 {
       margin: 0;
-      font-size: 19px;
+      font-size: 16px;
     }
 
     .desc {
@@ -417,8 +419,8 @@
     }
 
     @media (max-width: 760px) {
-      .page { padding: 10px; }
-      .hero h1 { font-size: 27px; }
+      .page { padding: 12px; }
+      .hero h1 { font-size: 21px; }
       .years-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
       canvas { height: 260px; }
     }

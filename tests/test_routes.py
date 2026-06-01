@@ -89,6 +89,34 @@ class RouteSmokeTests(unittest.TestCase):
                 self._assert_balanced(path)
 
 
+class LayoutConsistencyTests(unittest.TestCase):
+    """Every page must share the same page width and banner heading size, so
+    navigating between tools does not visibly resize the content area."""
+
+    EXPECTED_MAXWIDTH = "1080px"
+
+    def _maxwidths(self, html):
+        import re
+        return set(re.findall(r"\.(?:page|wrap)[^{]*\{[^}]*?max-width:\s*(\d+px)", html))
+
+    def test_served_pages_share_width(self):
+        for path in ["/", "/VPM", "/BAT", "/analyze?symbol=AAPL&depth=quick"]:
+            with self.subTest(path=path):
+                _, _, body = request(cc.app, path)
+                self.assertIn(self.EXPECTED_MAXWIDTH, body, f"{path} missing {self.EXPECTED_MAXWIDTH}")
+                self.assertNotIn("1240px", body, f"{path} still has the old 1240px width")
+
+    def test_static_tools_share_width(self):
+        import os
+        root = os.path.dirname(os.path.dirname(__file__))
+        for rel in ["apps/OTD/otd_estimator.html", "apps/CVP/cvp_planner.html"]:
+            with self.subTest(file=rel):
+                with open(os.path.join(root, rel), encoding="utf-8") as fh:
+                    html = fh.read()
+                self.assertIn(self.EXPECTED_MAXWIDTH, html, f"{rel} missing {self.EXPECTED_MAXWIDTH}")
+                self.assertNotIn("1240px", html, f"{rel} still has the old 1240px width")
+
+
 class FormSizeLimitTests(unittest.TestCase):
     def test_oversized_form_returns_413(self):
         big = b"amount=" + b"9" * (cc.config.MAX_FORM_BYTES + 1024)
