@@ -125,6 +125,47 @@ class QuoteCacheTests(unittest.TestCase):
             self.m.HTTP = original
 
 
+class DeployCompatibilityTests(unittest.TestCase):
+    """Guards against syntax that parses on a newer local Python but breaks on
+    the deploy target (Raspberry Pi runs Python 3.11). Notably, backslashes
+    inside f-string expression parts are only legal in 3.12+.
+    """
+
+    def _project_py_files(self):
+        import os
+        root = os.path.dirname(os.path.dirname(__file__))
+        for sub in ("coreportal.py", "coreportal_core", "tests", "scripts"):
+            path = os.path.join(root, sub)
+            if os.path.isfile(path):
+                yield path
+            elif os.path.isdir(path):
+                for dirpath, _dirs, files in os.walk(path):
+                    for f in files:
+                        if f.endswith(".py"):
+                            yield os.path.join(dirpath, f)
+
+    def test_no_backslash_in_fstring_expression(self):
+        # Tokenize each file and flag f-strings whose {expression} contains '\'.
+        import io
+        import re
+        import tokenize
+
+        offenders = []
+        for path in self._project_py_files():
+            with open(path, encoding="utf-8") as fh:
+                src = fh.read()
+            try:
+                tokens = tokenize.generate_tokens(io.StringIO(src).readline)
+                for tok in tokens:
+                    if tok.type == tokenize.STRING and re.match(r"^[a-zA-Z]*f", tok.string, re.I):
+                        for part in re.findall(r"\{[^{}]*\}", tok.string):
+                            if "\\" in part:
+                                offenders.append(f"{path}:{tok.start[0]} {part[:50]}")
+            except tokenize.TokenError:
+                pass
+        self.assertEqual(offenders, [], "backslash in f-string expression (breaks Python 3.11):\n" + "\n".join(offenders))
+
+
 class PackageStructureTests(unittest.TestCase):
     def test_layers_share_single_app(self):
         import coreportal as monolith

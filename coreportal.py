@@ -375,10 +375,11 @@ def shared_nav(active: str = "") -> str:
         ("otd", "OTD", OTD_PATH),
         ("cvp", "CVP", CVP_PATH),
     ]
-    links = "".join(
-        f'<a href="{href}"{" class=\"active\"" if key == active else ""}>{label}</a>'
-        for key, label, href in items
-    )
+    link_parts = []
+    for key, label, href in items:
+        cls = ' class="active"' if key == active else ''
+        link_parts.append(f'<a href="{href}"{cls}>{label}</a>')
+    links = "".join(link_parts)
     return (
         f'<nav class="topnav">'
         f'<a class="brand" href="{ROOT_PATH}">CorePortal</a>'
