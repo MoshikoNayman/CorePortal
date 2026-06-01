@@ -8,9 +8,15 @@ that bundles several tools behind one launcher.
 - `/` - Home launcher
 - `/VPM` - **Virtual Portfolio Manager**: multi-tenant paper trading with
   owners, portfolios, cash ledger, simulated trades, live quotes, charts, and
-  stock analysis (`/analyze`).
+  stock analysis (`/analyze`). Includes an allocation & insights panel (holding
+  shares, cash slice, top/weakest movers) and per-row delete for trades and
+  cash entries.
 - `/BAT` - **Bank Account Tracker**: ledger, salary/spending, net-worth series,
-  and transfer-to-VPM. (`/NWD` is a compatibility alias that redirects here.)
+  spending-by-category breakdown for the month, per-row delete, and
+  transfer-to-VPM. (`/NWD` is a compatibility alias that redirects here.)
+
+A persistent top navigation bar links all tools, and a light/dark theme toggle
+persists across pages.
 - `/OTD` - Out-the-Door vehicle pricing estimator.
 - `/CVP` - Car Value / buy-sell TCO planner.
 
