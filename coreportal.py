@@ -2522,6 +2522,54 @@ def render_dashboard(
     else:
         position_rows_html = "<tr><td colspan='9'>No open positions yet for this portfolio.</td></tr>"
 
+    # Allocation & insights: composition by holding (incl. cash) + best/worst movers.
+    allocation_html = ""
+    if positions and market_value > 0:
+        invested = market_value
+        alloc_basis = to_decimal(invested + (cash_balance if cash_balance > 0 else Decimal("0")), MONEY_QUANT)
+        alloc_items = []
+        for position in sorted(positions, key=lambda p: p["current_value"], reverse=True):
+            share = float(position["current_value"] / alloc_basis * 100) if alloc_basis > 0 else 0.0
+            alloc_items.append(
+                f"<div class='cat-row'><div class='cat-head'>"
+                f"<span class='cat-name'>{html.escape(position['symbol'])}</span>"
+                f"<span class='cat-amt'>{format_money(position['current_value'])} "
+                f"<span class='cat-pct'>({share:.0f}%)</span></span></div>"
+                f"<div class='cat-bar'><div class='cat-fill' style='width:{share:.1f}%'></div></div></div>"
+            )
+        if cash_balance > 0 and alloc_basis > 0:
+            cash_share = float(cash_balance / alloc_basis * 100)
+            alloc_items.append(
+                f"<div class='cat-row'><div class='cat-head'>"
+                f"<span class='cat-name'>Cash</span>"
+                f"<span class='cat-amt'>{format_money(cash_balance)} "
+                f"<span class='cat-pct'>({cash_share:.0f}%)</span></span></div>"
+                f"<div class='cat-bar'><div class='cat-fill cat-fill-cash' style='width:{cash_share:.1f}%'></div></div></div>"
+            )
+        best = max(positions, key=lambda p: p["unrealized_pct"])
+        worst = min(positions, key=lambda p: p["unrealized_pct"])
+        movers_html = (
+            f"<div class='mover-grid'>"
+            f"<div class='mover'><div class='label'>Top performer</div>"
+            f"<div class='mover-sym'>{html.escape(best['symbol'])}</div>"
+            f"<div class='gain'>{format_percent(best['unrealized_pct'])}</div></div>"
+            f"<div class='mover'><div class='label'>Weakest</div>"
+            f"<div class='mover-sym'>{html.escape(worst['symbol'])}</div>"
+            f"<div class='{'gain' if worst['unrealized_pct'] >= 0 else 'loss'}'>{format_percent(worst['unrealized_pct'])}</div></div>"
+            f"</div>"
+        )
+        allocation_html = (
+            f"<div class='section-title'><h2>Allocation &amp; Insights</h2>"
+            f"<span class='muted-note'>{len(positions)} holding(s)</span></div>"
+            + movers_html + "".join(alloc_items)
+        )
+    else:
+        allocation_html = (
+            "<h2>Allocation &amp; Insights</h2>"
+            "<p class='muted-note'>Buy a position to see how your portfolio is allocated "
+            "and which holdings are leading.</p>"
+        )
+
     trade_rows_html = ""
     if trade_rows:
         for row in trade_rows:
@@ -2610,6 +2658,18 @@ def render_dashboard(
     .button-row {{ display: flex; gap: 8px; flex-wrap: wrap; }}
     .button-row button {{ flex: 1 1 160px; }}
     .muted-note {{ color: var(--muted); font-size: 13px; line-height: 1.45; }}
+    /* Allocation bars + movers */
+    .cat-row {{ margin-bottom: 10px; }}
+    .cat-head {{ display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; margin-bottom: 4px; }}
+    .cat-name {{ font-weight: 700; }}
+    .cat-amt {{ font-weight: 700; white-space: nowrap; }}
+    .cat-pct {{ color: var(--muted); font-weight: 600; font-size: 11.5px; }}
+    .cat-bar {{ height: 8px; background: var(--th-bg); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }}
+    .cat-fill {{ height: 100%; background: linear-gradient(90deg, var(--brand), #6f9bff); border-radius: 999px; }}
+    .cat-fill-cash {{ background: linear-gradient(90deg, #94a3b8, #cbd5e1); }}
+    .mover-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }}
+    .mover {{ border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--th-bg); }}
+    .mover-sym {{ font-size: 17px; font-weight: 900; margin-top: 2px; }}
   </style>
   {theme_script()}
 </head>
@@ -2733,6 +2793,9 @@ def render_dashboard(
       </div>
 
       <div class="main-stack">
+                <section class="card" id="allocation">
+                    {allocation_html}
+                </section>
                 <section class="card">
                     <div class="section-title">
                         <h2>Open Positions</h2>
