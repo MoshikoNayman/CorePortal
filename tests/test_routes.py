@@ -117,6 +117,23 @@ class LayoutConsistencyTests(unittest.TestCase):
                 self.assertNotIn("1240px", html, f"{rel} still has the old 1240px width")
 
 
+class CsvExportTests(unittest.TestCase):
+    def test_vpm_export_is_csv(self):
+        status, headers, body = request(cc.app, "/vpm/export.csv")
+        self.assertEqual(status, 200)
+        self.assertIn("text/csv", headers.get("content-type", ""))
+        self.assertIn("attachment", headers.get("content-disposition", ""))
+        self.assertIn("POSITIONS", body)
+        self.assertIn("TRADE HISTORY", body)
+
+    def test_bat_export_is_csv(self):
+        status, headers, body = request(cc.app, "/BAT/export.csv")
+        self.assertEqual(status, 200)
+        self.assertIn("text/csv", headers.get("content-type", ""))
+        self.assertIn("attachment", headers.get("content-disposition", ""))
+        self.assertIn("Amount", body)
+
+
 class FormSizeLimitTests(unittest.TestCase):
     def test_oversized_form_returns_413(self):
         big = b"amount=" + b"9" * (cc.config.MAX_FORM_BYTES + 1024)

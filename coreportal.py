@@ -26,7 +26,7 @@ import requests
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.routing import Route
 
 APP_ROOT = Path(__file__).parent
@@ -2874,6 +2874,7 @@ def render_dashboard(
         <section class="card">
           <div class="section-title">
                         <h2>Order History</h2>
+                        <a class="portfolio-pill" href="{with_base_path('/vpm/export.csv')}?{build_query_string(current_tenant_id, current_portfolio_id)}">Export CSV</a>
           </div>
           <div class="table-wrap">
             <table>
@@ -3869,6 +3870,7 @@ def render_tracker_page(
     <style>
         {shared_theme_css()}
         /* Tracker specifics */
+        .section-title {{ display:flex; justify-content:space-between; gap:12px; align-items:baseline; margin-bottom:8px; }}
         .glance {{ margin-bottom:14px; }}
         .glance-controls {{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }}
         .glance-graph {{ width:100%; height:200px; border:1px solid var(--line); border-radius:12px; background:var(--card); display:block; }}
@@ -4008,7 +4010,10 @@ def render_tracker_page(
 
             <div class=\"main-stack\">
                 <section class=\"card\">
-                    <h2>Ledger: {html.escape(str(current_account['name']))}</h2>
+                    <div class=\"section-title\">
+                        <h2>Ledger: {html.escape(str(current_account['name']))}</h2>
+                        <a class=\"portfolio-pill\" href=\"{TRACKER_PATH}/export.csv?{build_tracker_query_string(current_tenant_id, current_account_id)}\">Export CSV</a>
+                    </div>
                     <p>All income and expense entries for the selected account. Future salary projections appear here but are excluded from the current balance.</p>
                     <div class=\"table-wrap\">
                         <table>
@@ -4574,6 +4579,75 @@ async def cash_delete(request):
     return redirect_with_message(message, tenant_id=tenant_id, portfolio_id=portfolio_id)
 
 
+def _csv_response(rows: list[list[Any]], filename: str) -> Response:
+    """Build a downloadable CSV Response from a list of rows (first row = header)."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    for row in rows:
+        writer.writerow(row)
+    safe_name = "".join(ch for ch in filename if ch.isalnum() or ch in {"-", "_", "."}) or "export.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
+    )
+
+
+async def vpm_export(request):
+    """Export the selected portfolio's positions and full trade history as CSV."""
+    tenant_id = parse_optional_int(request.query_params.get("tenant_id"))
+    portfolio_id = parse_optional_int(request.query_params.get("portfolio_id"))
+    with db_connection() as connection:
+        _, current_tenant, _, current_portfolio = resolve_selection(connection, tenant_id, portfolio_id)
+        pid = int(current_portfolio["id"])
+        positions = build_positions(connection, pid)
+        trades = connection.execute(
+            "SELECT symbol, side, quantity, price, trade_date, created_at FROM trades"
+            " WHERE portfolio_id=? ORDER BY trade_date ASC, id ASC",
+            (pid,),
+        ).fetchall()
+
+    rows: list[list[Any]] = [["CorePortal VPM export"], ["Owner", str(current_tenant["name"])], ["Portfolio", str(current_portfolio["name"])], []]
+    rows.append(["POSITIONS"])
+    rows.append(["Symbol", "Quantity", "Avg Cost", "Cost Basis", "Current Price", "Current Value", "Unrealized Gain", "Unrealized %", "First Buy"])
+    for p in positions:
+        rows.append([
+            p["symbol"], str(p["quantity"]), str(p["average_cost"]), str(p["cost_basis"]),
+            str(p["current_price"]), str(p["current_value"]), str(p["unrealized_gain"]),
+            str(p["unrealized_pct"]), str(p["first_buy_date"]),
+        ])
+    rows.append([])
+    rows.append(["TRADE HISTORY"])
+    rows.append(["Side", "Symbol", "Quantity", "Price", "Trade Date", "Recorded At"])
+    for t in trades:
+        rows.append([t["side"], t["symbol"], t["quantity"], t["price"], t["trade_date"], t["created_at"]])
+
+    name = f"vpm-{str(current_portfolio['name']).replace(' ', '_')}.csv"
+    return _csv_response(rows, name)
+
+
+async def bat_export(request):
+    """Export the selected account's full ledger as CSV."""
+    tenant_id = parse_optional_int(request.query_params.get("tenant_id"))
+    account_id = parse_optional_int(request.query_params.get("account_id"))
+    with db_connection() as connection:
+        _tenants, current_tenant, _accounts, current_account, _portfolios = resolve_tracker_selection(connection, tenant_id, account_id)
+        aid = int(current_account["id"])
+        entries = connection.execute(
+            "SELECT amount, entry_date, category, note, created_at FROM bank_ledger"
+            " WHERE account_id=? ORDER BY entry_date ASC, id ASC",
+            (aid,),
+        ).fetchall()
+
+    rows: list[list[Any]] = [["CorePortal BAT export"], ["Owner", str(current_tenant["name"])], ["Account", str(current_account["name"])], []]
+    rows.append(["Amount", "Date", "Category", "Note", "Recorded At"])
+    for e in entries:
+        rows.append([e["amount"], e["entry_date"], e["category"] or "", e["note"] or "", e["created_at"]])
+
+    name = f"bat-{str(current_account['name']).replace(' ', '_')}.csv"
+    return _csv_response(rows, name)
+
+
 async def snapshot_save(request):
     form = await parse_form(request)
     tenant_id = parse_optional_int(form.get("tenant_id"))
@@ -4925,6 +4999,8 @@ app = Starlette(
         Route(with_base_path("/portfolio/add"), portfolio_add, methods=["POST"]),
         Route(with_base_path("/cash/add"), cash_add, methods=["POST"]),
         Route(with_base_path("/cash/delete"), cash_delete, methods=["POST"]),
+        Route(with_base_path("/vpm/export.csv"), vpm_export, methods=["GET"]),
+        Route(f"{TRACKER_PATH}/export.csv", bat_export, methods=["GET"]),
         Route(with_base_path("/trade/add"), trade_add, methods=["POST"]),
         Route(with_base_path("/trade/delete"), trade_delete, methods=["POST"]),
         Route(with_base_path("/api/quote/current"), api_current_quote, methods=["GET"]),

@@ -44,6 +44,8 @@ cash_add = source.cash_add
 cash_delete = source.cash_delete
 trade_add = source.trade_add
 trade_delete = source.trade_delete
+vpm_export = source.vpm_export
+bat_export = source.bat_export
 snapshot_save = source.snapshot_save
 snapshot_load = source.snapshot_load
 defaults_restore = source.defaults_restore
@@ -75,7 +77,7 @@ __all__ = [
     "tracker_account_add", "tracker_entry_add", "tracker_deposit", "tracker_salary_add",
     "tracker_spending_add", "tracker_transfer_to_vpm", "tracker_zeroize", "tracker_entry_delete",
     "tenant_add", "owner_delete", "portfolio_add", "cash_add", "cash_delete",
-    "trade_add", "trade_delete",
+    "trade_add", "trade_delete", "vpm_export", "bat_export",
     "snapshot_save", "snapshot_load", "defaults_restore", "portfolio_zeroize",
     "api_current_quote", "api_historical_quote", "health_check",
     "login", "logout", "render_login_page",
